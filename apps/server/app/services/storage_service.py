@@ -1,127 +1,64 @@
-import os
-import shutil
-import uuid
-from typing import Optional, Dict
-from datetime import datetime, timedelta
+"""File persistence is indexed by the durable job record, never process memory."""
+import hashlib
+import logging
+from pathlib import Path
+from fastapi import HTTPException
 from app.core.config import settings
-from app.core.security import hash_content
 
-# Optional Supabase SDK import
-try:
-    from supabase import create_client, Client
-    HAS_SUPABASE_SDK = True
-except ImportError:
-    HAS_SUPABASE_SDK = False
+logger = logging.getLogger(__name__)
 
 
 class StorageService:
-    """Manages ephemeral in-memory, Supabase Storage bucket, and local disk staging."""
     def __init__(self):
-        self.storage_dir = settings.TEMP_STORAGE_DIR
-        self._temp_registry: Dict[str, dict] = {}
-        self.supabase_client: Optional[Client] = None
+        self.client = None
 
-        if HAS_SUPABASE_SDK and settings.SUPABASE_URL and (settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_KEY):
-            try:
-                key = settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_KEY
-                self.supabase_client = create_client(settings.SUPABASE_URL, key)
-                print(f"[StorageService] Connected to Supabase Storage: {settings.SUPABASE_STORAGE_BUCKET}")
-            except Exception as e:
-                print(f"[StorageService] Supabase init failed ({e}), using local staging.")
+    def initialize(self):
+        self.client = None
+        if settings.ENVIRONMENT == "test" and settings.ALLOW_LOCAL_STORAGE:
+            Path(settings.TEMP_STORAGE_DIR).mkdir(parents=True, exist_ok=True)
+        if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+            from supabase import create_client
+            self.client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+            bucket = self.client.storage.get_bucket(settings.SUPABASE_STORAGE_BUCKET)
+            if bucket.public:
+                self.client = None
+                raise RuntimeError("Document storage bucket must be private")
 
-    def save_staged_file(self, job_id: str, file_name: str, content: bytes) -> dict:
-        ext = os.path.splitext(file_name)[1]
-        safe_name = f"{job_id}{ext}"
-        file_path = os.path.join(self.storage_dir, safe_name)
-        
-        # Always write local copy for buffer integrity
-        with open(file_path, "wb") as f:
-            f.write(content)
-            
-        file_hash = hash_content(content)
-        supabase_path = None
+    def save(self, job_id, filename, content, mime):
+        if not self.client and not (settings.ENVIRONMENT == "test" and settings.ALLOW_LOCAL_STORAGE):
+            raise HTTPException(503, "Private document storage is not configured")
+        suffix = Path(filename).suffix.lower()
+        path = Path(settings.TEMP_STORAGE_DIR).resolve() / (job_id + suffix)
+        remote = None
+        if self.client:
+            remote = "staged/" + path.name
+            self.client.storage.from_(settings.SUPABASE_STORAGE_BUCKET).upload(
+                remote, content, {"content-type": mime})
+        else:
+            path.write_bytes(content)
+        return {"file_path": str(path) if not remote else None, "supabase_path": remote,
+                "file_hash": hashlib.sha256(content).hexdigest(), "file_size_bytes": len(content)}
 
-        # Upload to Supabase bucket if configured
-        if self.supabase_client:
-            try:
-                storage_bucket = settings.SUPABASE_STORAGE_BUCKET
-                blob_path = f"staged/{safe_name}"
-                res = self.supabase_client.storage.from_(storage_bucket).upload(
-                    path=blob_path,
-                    file=content,
-                    file_options={"content-type": "application/octet-stream", "upsert": "true"}
-                )
-                supabase_path = blob_path
-                print(f"[StorageService] Staged to Supabase Storage: {storage_bucket}/{blob_path}")
-            except Exception as e:
-                print(f"[StorageService] Supabase upload warning: {e}")
-
-        meta = {
-            "job_id": job_id,
-            "file_name": file_name,
-            "file_path": file_path,
-            "supabase_path": supabase_path,
-            "file_size": len(content),
-            "file_hash": file_hash,
-            "created_at": datetime.utcnow(),
-            "expires_at": datetime.utcnow() + timedelta(seconds=settings.JOB_TTL_SECONDS)
-        }
-        self._temp_registry[job_id] = meta
-        return meta
-
-    def get_presigned_download_url(self, job_id: str, token: str) -> str:
-        """Generates a 60-second short-lived URL from Supabase Storage or server route."""
-        meta = self._temp_registry.get(job_id)
-        if self.supabase_client and meta and meta.get("supabase_path"):
-            try:
-                res = self.supabase_client.storage.from_(settings.SUPABASE_STORAGE_BUCKET).create_signed_url(
-                    path=meta["supabase_path"],
-                    expires_in=settings.TOKEN_PRESIGNED_URL_TTL_SECONDS
-                )
-                if isinstance(res, dict) and "signedURL" in res:
-                    return res["signedURL"]
-                elif hasattr(res, "signed_url"):
-                    return res.signed_url
-            except Exception as e:
-                print(f"[StorageService] Failed to create signed URL: {e}")
-        
-        # Fallback to FastAPI server download endpoint
-        return f"/api/v1/jobs/{job_id}/download?token={token}"
-
-    def get_file_meta(self, job_id: str) -> Optional[dict]:
-        return self._temp_registry.get(job_id)
-
-    def get_file_path(self, job_id: str) -> Optional[str]:
-        meta = self._temp_registry.get(job_id)
-        if meta and os.path.exists(meta["file_path"]):
-            return meta["file_path"]
+    def signed_url(self, job):
+        if self.client and job.get("supabase_path"):
+            response = self.client.storage.from_(settings.SUPABASE_STORAGE_BUCKET).create_signed_url(
+                job["supabase_path"], settings.TOKEN_PRESIGNED_URL_TTL_SECONDS)
+            return response["signedURL"]
         return None
 
-    def purge_file(self, job_id: str) -> bool:
-        """Physical shredding of local disk and deletion of Supabase Storage blob."""
-        meta = self._temp_registry.pop(job_id, None)
-        
-        # Delete from Supabase Storage
-        if self.supabase_client and meta and meta.get("supabase_path"):
-            try:
-                self.supabase_client.storage.from_(settings.SUPABASE_STORAGE_BUCKET).remove([meta["supabase_path"]])
-                print(f"[StorageService] Deleted Supabase storage blob: {meta['supabase_path']}")
-            except Exception as e:
-                print(f"[StorageService] Supabase blob delete warning: {e}")
-
-        # Local overwrite and unlink
-        if meta and os.path.exists(meta["file_path"]):
-            try:
-                size = os.path.getsize(meta["file_path"])
-                with open(meta["file_path"], "wb") as f:
-                    f.write(b"\x00" * min(size, 1024 * 1024))
-                os.remove(meta["file_path"])
-                return True
-            except Exception:
-                if os.path.exists(meta["file_path"]):
-                    os.remove(meta["file_path"])
-                return True
-        return False
+    def purge(self, job):
+        # Keep paths until every deletion succeeds, so cleanup can retry after restart.
+        try:
+            if job.get("supabase_path"):
+                if not self.client:
+                    return False
+                self.client.storage.from_(settings.SUPABASE_STORAGE_BUCKET).remove([job["supabase_path"]])
+            if job.get("file_path"):
+                Path(job["file_path"]).unlink(missing_ok=True)
+            return True
+        except Exception:
+            logger.warning("File deletion pending for job %s", job["id"])
+            return False
 
 
 storage_service = StorageService()
