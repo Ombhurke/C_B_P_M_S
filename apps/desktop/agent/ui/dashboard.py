@@ -1,16 +1,17 @@
 import sys
 import os
+import shutil
 from typing import Optional, Callable
 
-# Check for PySide6
 try:
     from PySide6.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
         QLabel, QLineEdit, QPushButton, QTableWidget, QTableWidgetItem,
-        QHeaderView, QComboBox, QTextEdit, QMessageBox
+        QHeaderView, QComboBox, QTextEdit, QMessageBox, QInputDialog,
+        QStackedWidget, QButtonGroup
     )
-    from PySide6.QtCore import Qt, Signal, QObject, QTimer
-    from PySide6.QtGui import QFont, QColor
+    from PySide6.QtCore import Qt, Signal, QObject
+    from PySide6.QtGui import QFont
     HAS_PYSIDE = True
 except ImportError:
     HAS_PYSIDE = False
@@ -21,10 +22,11 @@ class AgentUiBridge(QObject if HAS_PYSIDE else object):
         queue_updated = Signal(list)
         log_message = Signal(str)
         scan_triggered = Signal(str)
+        stage_updated = Signal(int, str)
 
 
 class DesktopDashboard:
-    """Counter Operator GUI for CBPMS Desktop Agent."""
+    """Print Station Desktop GUI matching station-01 to station-06."""
     def __init__(
         self,
         on_release_callback: Optional[Callable[[str], None]] = None,
@@ -34,6 +36,24 @@ class DesktopDashboard:
         self.on_printer_change = on_printer_change
         self.app = None
         self.window = None
+        self.log_box = None
+        self.queue_table = None
+        self.scan_input = None
+        self.release_btn = None
+        self.proceed_btn = None
+        self.review_file_lbl = None
+        self.review_specs_lbl = None
+        self.stage1_lbl = None
+        self.stage2_lbl = None
+        self.stage3_lbl = None
+        self.confirm_output_btn = None
+        self.report_issue_btn = None
+        self.printer_combo = None
+        self.bridge = None
+        self.active_job = None
+        from agent.core.config import agent_settings
+        self.shop_id = agent_settings.SHOP_ID
+        self.operator_username = agent_settings.OPERATOR_USERNAME
 
     def launch(self, initial_printers: list, initial_queue: list):
         if not HAS_PYSIDE:
@@ -41,72 +61,120 @@ class DesktopDashboard:
             return
 
         self.app = QApplication.instance() or QApplication(sys.argv)
+        self.bridge = AgentUiBridge()
+        self.bridge.log_message.connect(self._log, Qt.QueuedConnection)
+        self.bridge.queue_updated.connect(self._update_queue, Qt.QueuedConnection)
+
         self.window = QMainWindow()
-        self.window.setWindowTitle("CBPMS Counter Agent - v1.0.0")
-        self.window.resize(800, 560)
+        self.window.setWindowTitle("CBPMS Print Station — Desktop Operator Console")
+        self.window.resize(1024, 680)
         self.window.setStyleSheet("""
-            QMainWindow { background-color: #090d16; color: #f1f5f9; }
-            QLabel { color: #cbd5e1; font-family: 'Segoe UI', sans-serif; }
-            QLineEdit { background-color: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px; color: #38bdf8; font-size: 16px; font-weight: bold; }
-            QLineEdit:focus { border: 1px solid #0284c7; }
-            QPushButton { background-color: #0284c7; border-radius: 8px; padding: 10px 18px; color: #ffffff; font-weight: bold; }
-            QPushButton:hover { background-color: #0369a1; }
-            QTableWidget { background-color: #0f172a; border: 1px solid #1e293b; border-radius: 8px; color: #e2e8f0; gridline-color: #1e293b; }
-            QHeaderView::section { background-color: #1e293b; color: #94a3b8; padding: 6px; font-weight: bold; border: none; }
-            QComboBox { background-color: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 8px; color: #f8fafc; }
-            QTextEdit { background-color: #0f172a; border: 1px solid #1e293b; border-radius: 8px; color: #10b981; font-family: 'Consolas', monospace; font-size: 11px; }
+            QMainWindow { background-color: #fcfaf7; color: #251c17; font-family: 'Segoe UI', sans-serif; }
+            QLabel { color: #251c17; font-family: 'Segoe UI', sans-serif; }
         """)
 
-        central = QWidget()
-        layout = QVBoxLayout(central)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(14)
-
-        # Header Bar
-        header = QHBoxLayout()
-        title_label = QLabel("⚡ CBPMS Spooler & Shredder Agent")
-        title_label.setFont(QFont("Segoe UI", 14, QFont.Bold))
-        header.addWidget(title_label)
-
-        header.addStretch()
-        header.addWidget(QLabel("Target Printer:"))
+        # Printer combo
         self.printer_combo = QComboBox()
         self.printer_combo.addItems(initial_printers)
         if self.on_printer_change:
             self.printer_combo.currentTextChanged.connect(self.on_printer_change)
-        header.addWidget(self.printer_combo)
-        layout.addLayout(header)
+            self.on_printer_change(self.printer_combo.currentText())
 
-        # Scanner Input Bar
-        scan_layout = QHBoxLayout()
-        self.scan_input = QLineEdit()
-        self.scan_input.setPlaceholderText("Scan 2D Barcode (USB Scanner) or Type 4-Digit PIN...")
-        self.scan_input.returnPressed.connect(self._handle_manual_submit)
-        scan_layout.addWidget(self.scan_input)
+        from agent.ui.panels import (
+            build_connect_panel, build_release_panel, build_review_panel,
+            build_monitor_panel, build_history_panel, build_settings_panel
+        )
 
-        self.release_btn = QPushButton("Release Job")
-        self.release_btn.clicked.connect(self._handle_manual_submit)
-        scan_layout.addWidget(self.release_btn)
-        layout.addLayout(scan_layout)
+        central = QWidget()
+        main_layout = QHBoxLayout(central)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-        # Queue Table
-        layout.addWidget(QLabel("Live Counter Queue (Real-Time WebSocket Sync):"))
-        self.queue_table = QTableWidget(0, 5)
-        self.queue_table.setHorizontalHeaderLabels(["PIN / Token", "File Name", "Pages", "Color / Duplex", "Total Cost"])
-        self.queue_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        layout.addWidget(self.queue_table)
+        # 220px Espresso Navigation Rail
+        rail = QWidget()
+        rail.setFixedWidth(220)
+        rail.setStyleSheet("background-color: #1a1613; border-right: 1px solid #2d2621;")
+        rail_layout = QVBoxLayout(rail)
+        rail_layout.setContentsMargins(12, 20, 12, 20)
+        rail_layout.setSpacing(8)
 
-        # Audit Log
-        layout.addWidget(QLabel("Ephemeral Shredder & Spooler Audit Log:"))
-        self.log_box = QTextEdit()
-        self.log_box.setReadOnly(True)
-        self.log_box.setFixedHeight(120)
-        self.log_box.append("[System] Desktop Agent started. Spooler bridge ready.")
-        self.log_box.append("[Security] Local sandbox directory: %TEMP%\\cbpms_spool\\")
-        layout.addWidget(self.log_box)
+        brand = QLabel("PRINT STATION")
+        brand.setStyleSheet("color: #ea7c50; font-weight: bold; font-size: 14px; padding: 0 8px 12px 8px; border-bottom: 1px solid #2d2621;")
+        rail_layout.addWidget(brand)
+
+        self.stack = QStackedWidget()
+        self.stack.addWidget(build_connect_panel(self))
+        self.stack.addWidget(build_release_panel(self))
+        self.stack.addWidget(build_review_panel(self))
+        self.stack.addWidget(build_monitor_panel(self))
+        self.stack.addWidget(build_history_panel(self))
+        self.stack.addWidget(build_settings_panel(self))
+
+        nav_items = [
+            ("Connect", 0),
+            ("Release Desk", 1),
+            ("Review", 2),
+            ("Monitor", 3),
+            ("History", 4),
+            ("Settings", 5)
+        ]
+
+        self.nav_buttons = []
+        for label, idx in nav_items:
+            btn = QPushButton(label)
+            btn.setCheckable(True)
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: transparent;
+                    color: #d1c7bc;
+                    text-align: left;
+                    padding: 10px 14px;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    font-weight: 600;
+                    border: none;
+                }
+                QPushButton:hover { background-color: #26201b; color: #ffffff; }
+                QPushButton:checked { background-color: #ea7c50; color: #ffffff; }
+            """)
+            btn.clicked.connect(lambda _, i=idx: self._switch_tab(i))
+            rail_layout.addWidget(btn)
+            self.nav_buttons.append(btn)
+
+        self.nav_buttons[1].setChecked(True)  # Start on Release Desk
+        self.stack.setCurrentIndex(1)
+
+        rail_layout.addStretch()
+        footer = QLabel(f"Station: Online\n{self.operator_username}")
+        footer.setStyleSheet("color: #8c7e72; font-size: 11px; padding: 8px;")
+        rail_layout.addWidget(footer)
+
+        main_layout.addWidget(rail)
+        main_layout.addWidget(self.stack)
 
         self.window.setCentralWidget(central)
         self.window.show()
+        self._update_queue(initial_queue)
+        self._log("[System] Print Station initialized. Local spooler bridge ready.")
+
+    def _switch_tab(self, index: int):
+        self.stack.setCurrentIndex(index)
+        for i, btn in enumerate(self.nav_buttons):
+            btn.setChecked(i == index)
+
+    def login_credentials(self):
+        from agent.core.config import agent_settings
+        username = agent_settings.OPERATOR_USERNAME
+        password = agent_settings.OPERATOR_PASSWORD
+        if not username:
+            username, ok = QInputDialog.getText(self.window, "Sign in", "Operator username:")
+            if not ok:
+                return "", ""
+        if not password:
+            password, ok = QInputDialog.getText(self.window, "Sign in", "Password:", QLineEdit.Password)
+            if not ok:
+                return "", ""
+        return username, password
 
     def _handle_manual_submit(self):
         text = self.scan_input.text().strip()
@@ -114,17 +182,68 @@ class DesktopDashboard:
             self.on_release_callback(text)
             self.scan_input.clear()
 
+    def _handle_proceed_print(self):
+        self._switch_tab(3)  # Switch to Monitor
+
+    def _handle_confirm_output(self):
+        from agent.core.api_client import api_client
+        if self.active_job:
+            try:
+                api_client.confirm_output(self.active_job["job_id"])
+                self._log(f"[Physical] Output confirmed for {self.active_job['job_id']}.")
+            except Exception as e:
+                self._log(f"[Error] Confirmation failed: {e}")
+        self.stage3_lbl.setText("Stage 3: Physical Output Confirmation — Verified & Finished")
+        self._switch_tab(1)  # Return to release desk
+
+    def _handle_report_issue(self):
+        from agent.core.api_client import api_client
+        if self.active_job:
+            try:
+                api_client.report_issue(self.active_job["job_id"], "paper_jam", "Operator flagged issue at station")
+                self._log(f"[Hardware] Reported issue for {self.active_job['job_id']}; retained in queue.")
+            except Exception as e:
+                self._log(f"[Error] Report issue failed: {e}")
+        self.stage3_lbl.setText("Stage 3: Physical Output Confirmation — Issue Flagged (Retained)")
+
+    def _handle_purge_cache(self):
+        from agent.core.config import agent_settings
+        spool_dir = agent_settings.LOCAL_SPOOL_DIR
+        count = 0
+        if os.path.exists(spool_dir):
+            for f in os.listdir(spool_dir):
+                path = os.path.join(spool_dir, f)
+                try:
+                    if os.path.isfile(path):
+                        os.remove(path)
+                        count += 1
+                except Exception:
+                    pass
+        self._log(f"[Maintenance] Cleaned {count} temporary spool file(s).")
+
     def log(self, text: str):
+        if self.bridge:
+            self.bridge.log_message.emit(text)
+        else:
+            self._log(text)
+
+    def _log(self, text: str):
         if self.log_box:
             self.log_box.append(text)
         print(f"[UI Log] {text}")
 
     def update_queue(self, jobs: list):
+        if self.bridge:
+            self.bridge.queue_updated.emit(jobs)
+        else:
+            self._update_queue(jobs)
+
+    def _update_queue(self, jobs: list):
         if not self.queue_table:
             return
         self.queue_table.setRowCount(len(jobs))
         for row, j in enumerate(jobs):
-            self.queue_table.setItem(row, 0, QTableWidgetItem(str(j.get("release_token", "-"))))
+            self.queue_table.setItem(row, 0, QTableWidgetItem(str(j.get("job_status", "-"))))
             self.queue_table.setItem(row, 1, QTableWidgetItem(str(j.get("file_name", "doc"))))
             self.queue_table.setItem(row, 2, QTableWidgetItem(f"{j.get('page_count', 1)} pgs ({j.get('copy_count', 1)} copies)"))
             self.queue_table.setItem(row, 3, QTableWidgetItem(f"{'Color' if j.get('is_color') else 'B&W'} / {j.get('duplex_mode', 'simplex')}"))
