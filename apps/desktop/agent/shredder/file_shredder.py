@@ -16,7 +16,7 @@ class FileShredder:
 
         try:
             length = os.path.getsize(file_path)
-            with open(file_path, "ba+", buffering=0) as f:
+            with open(file_path, "r+b", buffering=0) as f:
                 for _ in range(passes):
                     f.seek(0)
                     f.write(b"\x00" * length)
@@ -24,7 +24,7 @@ class FileShredder:
                     os.fsync(f.fileno())
                     
             os.remove(file_path)
-            print(f"[Shredder] Securely shredded and unlinked: {file_path}")
+            print("[Cleanup] Local temporary file removed")
             return True
         except Exception as e:
             print(f"[Shredder] Error during shredding: {e}")

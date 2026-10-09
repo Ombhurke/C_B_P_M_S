@@ -16,10 +16,18 @@ class AgentSettings(BaseSettings):
         os.environ.get("TEMP", os.path.expanduser("~")),
         "cbpms_spool"
     )
+    LOCAL_STATE_DIR: str = os.path.join(
+        os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
+        "CBPMS", "state"
+    )
     
     # Auto-release on barcode scan
     AUTO_RELEASE_ON_SCAN: bool = True
     SELECTED_PRINTER_NAME: str = "HP LaserJet Pro M404dn (B&W High Speed)"
+    OPERATOR_USERNAME: str = ""
+    OPERATOR_PASSWORD: str = ""
+    MOCK_PRINTING: bool = False
+    RAW_PDF_SUPPORTED: bool = False
 
 
 agent_settings = AgentSettings()

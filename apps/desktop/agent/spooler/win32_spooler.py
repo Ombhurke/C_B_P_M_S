@@ -2,6 +2,7 @@ import sys
 import os
 import time
 from typing import List, Dict, Optional
+from agent.core.config import agent_settings
 
 # Attempt native win32print import on Windows
 try:
@@ -27,7 +28,8 @@ class NativeSpoolerBridge:
             except Exception as e:
                 print(f"[Spooler] Failed to enum native printers: {e}")
         
-        # Fallback list for mock/development
+        if not agent_settings.MOCK_PRINTING:
+            return []
         return [
             "HP LaserJet Pro M404dn (B&W High Speed)",
             "Canon imageRUNNER C3226 (Color & Duplex)",
@@ -48,6 +50,16 @@ class NativeSpoolerBridge:
 
         file_size = os.path.getsize(file_path)
         doc_title = f"CBPMS_Job_{job_meta.get('job_id', 'unknown')}_{os.path.basename(file_path)}"
+
+        if agent_settings.MOCK_PRINTING:
+            print("[Spooler:Mock] Simulated print; no physical output")
+            return True
+        if not self.is_native_available:
+            raise RuntimeError("Windows printer support is unavailable; simulation is disabled")
+        if (not agent_settings.RAW_PDF_SUPPORTED or not file_path.lower().endswith('.pdf') or
+            job_meta.get('copy_count', 1) != 1 or job_meta.get('layout_nup', 1) != 1 or
+            job_meta.get('duplex_mode', 'simplex') != 'simplex' or job_meta.get('is_color', False)):
+            raise RuntimeError("Native RAW printing requires an explicitly configured PDF-direct printer and default single-copy settings")
 
         if self.is_native_available:
             try:
@@ -71,13 +83,9 @@ class NativeSpoolerBridge:
                     win32print.ClosePrinter(h_printer)
             except Exception as e:
                 print(f"[Spooler] Native win32print error: {e}")
-                # Fallback to simulation if printer name was a mock
-                return True
+                return False
         else:
-            # Emulated spool for development/test
-            print(f"[Spooler:Mock] Spooling {file_size} bytes to '{printer_name}' (Duplex: {job_meta.get('duplex_mode')}, Color: {job_meta.get('is_color')})")
-            time.sleep(0.1)
-            return True
+            return False
 
 
 spooler_bridge = NativeSpoolerBridge()
