@@ -1,44 +1,45 @@
-import json
 import asyncio
+import json
 import threading
-from typing import Callable, Optional
 import websockets
 from agent.core.config import agent_settings
+from agent.core.api_client import api_client
 
 
 class DesktopWebSocketClient:
-    """Listens for real-time print queue updates pushed from cloud API."""
-    def __init__(self, on_event_callback: Optional[Callable[[str, dict], None]] = None):
+    def __init__(self, on_event_callback=None):
         self.on_event = on_event_callback
         self.is_running = False
-        self._thread: Optional[threading.Thread] = None
+        self._thread = None
 
     def start(self):
         self.is_running = True
-        self._thread = threading.Thread(target=self._run_loop, daemon=True)
+        self._thread = threading.Thread(target=lambda: asyncio.run(self._listen()), daemon=True)
         self._thread.start()
 
     def stop(self):
         self.is_running = False
-
-    def _run_loop(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self._listen())
+        if self._thread:
+            self._thread.join(timeout=2)
 
     async def _listen(self):
-        ws_url = f"{agent_settings.CLOUD_WS_URL}/{agent_settings.SHOP_ID}"
+        url = f"{agent_settings.CLOUD_WS_URL}/{agent_settings.SHOP_ID}"
         while self.is_running:
             try:
-                async with websockets.connect(ws_url) as ws:
-                    print(f"[AgentWS] Connected to live queue stream: {ws_url}")
+                # Reconcile on reconnect, including token refresh after session expiry.
+                await asyncio.to_thread(api_client.fetch_shop_queue)
+                async with websockets.connect(url, open_timeout=10) as ws:
+                    await ws.send(json.dumps({"token": api_client.token}))
                     while self.is_running:
-                        msg = await ws.recv()
-                        payload = json.loads(msg)
-                        event = payload.get("event")
-                        data = payload.get("data", {})
-                        if self.on_event:
-                            self.on_event(event, data)
-            except Exception as e:
-                # Retry backoff
+                        try:
+                            message = await asyncio.wait_for(ws.recv(), timeout=5)
+                            payload = json.loads(message)
+                            if self.on_event:
+                                self.on_event(payload.get("event"), payload.get("data", {}))
+                        except asyncio.TimeoutError:
+                            # Periodic snapshot catches missed or cross-worker events.
+                            if self.on_event:
+                                self.on_event("RECONCILE", {})
+                            await ws.send("ping")
+            except Exception:
                 await asyncio.sleep(3)

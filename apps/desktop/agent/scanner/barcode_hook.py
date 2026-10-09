@@ -23,7 +23,7 @@ class BarcodeScannerHook:
         # 1. Check 2D Barcode format
         if cleaned.startswith("CBPMS:"):
             parts = cleaned.split(":")
-            if len(parts) >= 3:
+            if len(parts) == 4 and parts[1] and re.fullmatch(r"\d{4}", parts[2]) and parts[3]:
                 shop_id = parts[1]
                 token = parts[2]
                 return shop_id, token
