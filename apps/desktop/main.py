@@ -1,9 +1,12 @@
-import sys
+import getpass
 import os
-import time
+import sys
+import threading
+
 from agent.core.config import agent_settings
 from agent.core.api_client import api_client
 from agent.core.ws_client import DesktopWebSocketClient
+from agent.core.completion_outbox import CompletionOutbox
 from agent.scanner.barcode_hook import BarcodeScannerHook
 from agent.spooler.win32_spooler import spooler_bridge
 from agent.shredder.file_shredder import file_shredder
@@ -14,106 +17,136 @@ class DesktopAgentApp:
     def __init__(self):
         self.selected_printer = agent_settings.SELECTED_PRINTER_NAME
         self.active_queue = []
-        self.scanner_hook = BarcodeScannerHook(on_scan_callback=self.on_barcode_scanned)
-        self.dashboard = DesktopDashboard(
-            on_release_callback=self.handle_release_request,
-            on_printer_change=self.handle_printer_change
-        )
+        self.release_lock = threading.Lock()
+        self.completion_outbox = CompletionOutbox(agent_settings.LOCAL_STATE_DIR)
+        self.scanner_hook = BarcodeScannerHook()
+        self.dashboard = DesktopDashboard(on_release_callback=self.start_release,
+                                          on_printer_change=self.handle_printer_change)
         self.ws_client = DesktopWebSocketClient(on_event_callback=self.handle_ws_event)
 
-    def handle_printer_change(self, printer_name: str):
+    def handle_printer_change(self, printer_name):
         self.selected_printer = printer_name
-        self.dashboard.log(f"[Config] Target printer set to: {printer_name}")
 
-    def handle_ws_event(self, event: str, data: dict):
-        if event == "JOB_QUEUED":
-            self.dashboard.log(f"🔔 [Live Queue] New Job received! PIN: {data.get('release_token')} ({data.get('file_name')})")
-            self.refresh_queue()
-        elif event == "JOB_COMPLETED":
-            self.dashboard.log(f"✅ [Live Queue] Job {data.get('job_id')} finished.")
+    def handle_ws_event(self, event, data):
+        if event != "PONG":
             self.refresh_queue()
 
     def refresh_queue(self):
         try:
-            self.active_queue = api_client.fetch_shop_queue(agent_settings.SHOP_ID)
+            self.flush_completion_outbox()
+            self.active_queue = api_client.fetch_shop_queue()
             self.dashboard.update_queue(self.active_queue)
-        except Exception as e:
-            print(f"[Agent] Failed to refresh queue: {e}")
+        except Exception as exc:
+            self.dashboard.log(f"Queue unavailable: {exc}")
 
-    def on_barcode_scanned(self, token: str, shop_id: str):
-        self.dashboard.log(f"⚡ [Scanner Hook] Barcode parsed. PIN: {token} (Shop: {shop_id or 'default'})")
-        self.handle_release_request(token)
-
-    def handle_release_request(self, raw_input: str):
-        shop_id, token = self.scanner_hook.parse_payload(raw_input)
-        target_token = token or raw_input.strip()
-
-        if not target_token:
-            self.dashboard.log("⚠️ [Error] Empty PIN or invalid barcode.")
-            return
-
-        self.dashboard.log(f"⏳ [Release] Verifying release token '{target_token}' with Cloud API...")
-        
-        try:
-            # 1. Verify with Cloud API
-            job_data = api_client.verify_release_token(target_token, shop_id)
-            job_id = job_data["job_id"]
-            file_name = job_data["file_name"]
-            download_url = job_data["download_url"]
-
-            self.dashboard.log(f"🔓 [Release] Token authorized for '{file_name}'. Downloading binary payload...")
-
-            # 2. Local Sandboxed Download
-            ext = os.path.splitext(file_name)[1] or ".pdf"
-            local_sandboxed_path = os.path.join(agent_settings.LOCAL_SPOOL_DIR, f"{job_id}{ext}")
-            
+    def flush_completion_outbox(self):
+        for pending in self.completion_outbox.pending():
             try:
-                api_client.download_staged_document(download_url, local_sandboxed_path)
-                self.dashboard.log(f"📥 [Spooler] Ingested into local sandbox: {local_sandboxed_path}")
+                api_client.notify_spool_completed(pending["job_id"], pending["status"], pending.get("error_message"))
+                self.completion_outbox.acknowledge(pending)
+                self.dashboard.log(f"Recovered server result for {pending['job_id']} without reprinting.")
+            except Exception as exc:
+                self.dashboard.log(f"Pending result for {pending['job_id']} remains queued: {exc}")
 
-                # 3. Spool to Windows Subsystem
-                self.dashboard.log(f"🖨️ [Spooler] Dispatching to '{self.selected_printer}'...")
-                spool_success = spooler_bridge.spool_job(self.selected_printer, local_sandboxed_path, job_data)
-                
-                if spool_success:
-                    self.dashboard.log(f"✨ [Spooler] Job successfully spooled to printer hardware.")
-                else:
-                    self.dashboard.log(f"⚠️ [Spooler] Spooler returned warning/error.")
-
+    def start_release(self, raw_input):
+        if not self.release_lock.acquire(blocking=False):
+            self.dashboard.log("A release is already running; please wait.")
+            return
+        def work():
+            try:
+                self.handle_release_request(raw_input)
             finally:
-                # 4. Immediate Physical File Shred & Cloud Purge Callback (Guaranteed in finally)
-                self.dashboard.log(f"🛡️ [Shredder] Shredding local sandbox file...")
-                file_shredder.shred_and_delete(local_sandboxed_path, passes=1)
-                
-                self.dashboard.log(f"☁️ [Cloud Cleanup] Triggering cloud blob ephemeral purge...")
-                api_client.notify_spool_completed(job_id, "completed")
-                self.dashboard.log(f"🔒 [Security] Job {job_id} completely purged from all disk and cloud memory.")
-                self.refresh_queue()
+                self.release_lock.release()
+        threading.Thread(target=work, daemon=False).start()
 
-        except Exception as e:
-            self.dashboard.log(f"❌ [Release Failed] {e}")
+    def handle_release_request(self, raw_input):
+        shop_id, token = self.scanner_hook.parse_payload(raw_input)
+        if not token:
+            self.dashboard.log("Enter a valid PIN or barcode.")
+            return
+        job = None
+        local_path = None
+        status = "failed"
+        failure_message = None
+        try:
+            job = api_client.verify_release_token(token, shop_id)
+            self.dashboard.active_job = job
+            if HAS_PYSIDE and getattr(self.dashboard, 'review_file_lbl', None):
+                self.dashboard.review_file_lbl.setText(job.get("file_name", "Document"))
+                specs = f"{job.get('page_count', 1)} pages · {'Color' if job.get('is_color') else 'B&W'} · {job.get('duplex_mode', 'simplex')} · {job.get('paper_type', 'normal').upper()}"
+                self.dashboard.review_specs_lbl.setText(specs)
+            local_path = os.path.join(agent_settings.LOCAL_SPOOL_DIR,
+                                      job["job_id"] + os.path.splitext(job["file_name"])[1])
+            api_client.download_staged_document(job["download_url"], local_path, job["file_hash"])
+            if HAS_PYSIDE and getattr(self.dashboard, 'stage1_lbl', None):
+                self.dashboard.stage1_lbl.setText("Stage 1: Verified Document Download — Completed (SHA-256 Validated)")
+            if not spooler_bridge.spool_job(self.selected_printer, local_path, job):
+                raise RuntimeError("Printer did not accept the job")
+            if HAS_PYSIDE and getattr(self.dashboard, 'stage2_lbl', None):
+                self.dashboard.stage2_lbl.setText(f"Stage 2: Windows Spooler Submission — Sent to {self.selected_printer}")
+            status = "completed"
+            self.dashboard.log("Document accepted by spooler; physical output is not yet confirmed.")
+            if HAS_PYSIDE and getattr(self.dashboard, 'stage3_lbl', None):
+                self.dashboard.stage3_lbl.setText("Stage 3: Physical Output Confirmation — Awaiting Operator Verification")
+        except Exception as exc:
+            failure_message = str(exc)
+            if HAS_PYSIDE and getattr(self.dashboard, 'stage2_lbl', None):
+                self.dashboard.stage2_lbl.setText(f"Stage 2: Submission Failed — {exc}")
+            self.dashboard.log(f"Release failed: {exc}")
+        finally:
+            if local_path and os.path.exists(local_path):
+                if not file_shredder.shred_and_delete(local_path):
+                    self.dashboard.log("Local cleanup failed; operator attention required.")
+            if job:
+                try:
+                    if failure_message:
+                        result = api_client.notify_spool_completed(job["job_id"], status, failure_message)
+                    else:
+                        result = api_client.notify_spool_completed(job["job_id"], status)
+                    if status == "failed":
+                        self.dashboard.log("Job retained for retry until expiry.")
+                    elif result.get("shredded"):
+                        self.dashboard.log("Cloud file deletion confirmed.")
+                    else:
+                        self.dashboard.log("Spooling recorded; cloud deletion is pending.")
+                except Exception as exc:
+                    self.completion_outbox.enqueue(job["job_id"], status, failure_message)
+                    self.dashboard.log(
+                        f"Result for {job['job_id']} is uncertain: {status}. "
+                        f"Callback queued for retry ({exc}); do not reprint automatically.")
+                self.refresh_queue()
 
     def run(self):
         printers = spooler_bridge.list_installed_printers()
-        self.ws_client.start()
-        self.refresh_queue()
-
         if HAS_PYSIDE:
-            self.dashboard.launch(printers, self.active_queue)
-            sys.exit(self.dashboard.app.exec())
+            self.dashboard.launch(printers, [])
+            username, password = self.dashboard.login_credentials()
         else:
-            print("[Agent] Running in Headless CLI Mode. Type a 4-digit PIN to release (or 'exit'):")
-            while True:
-                try:
-                    user_input = input("CBPMS-Agent> ").strip()
-                    if user_input.lower() in ("exit", "quit"):
+            username = agent_settings.OPERATOR_USERNAME or input("Operator username: ")
+            password = agent_settings.OPERATOR_PASSWORD or getpass.getpass("Operator password: ")
+        try:
+            api_client.login(username, password)
+            self.refresh_queue()
+            self.ws_client.start()
+        except Exception as exc:
+            self.dashboard.log(f"[Security] Unauthorized access or sign-in failed: {exc}. Closing application.")
+            if HAS_PYSIDE and self.dashboard.window:
+                self.dashboard.window.close()
+            return
+        try:
+            if HAS_PYSIDE:
+                self.dashboard.app.exec()
+            else:
+                while True:
+                    value = input("PIN / barcode (exit to quit)> ").strip()
+                    if value.lower() in ("exit", "quit"):
                         break
-                    if user_input:
-                        self.handle_release_request(user_input)
-                except (KeyboardInterrupt, EOFError):
-                    break
+                    self.handle_release_request(value)
+        except (KeyboardInterrupt, EOFError):
+            pass
+        finally:
+            self.ws_client.stop()
 
 
 if __name__ == "__main__":
-    app = DesktopAgentApp()
-    app.run()
+    DesktopAgentApp().run()

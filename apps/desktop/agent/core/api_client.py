@@ -1,65 +1,81 @@
-import os
+import hashlib
+import threading
 import requests
-from typing import Optional, Dict
 from agent.core.config import agent_settings
 
 
 class DesktopApiClient:
-    """HTTP Client communicating with the CBPMS Cloud Backend."""
-    def __init__(self, base_url: Optional[str] = None):
-        self.base_url = base_url or agent_settings.CLOUD_API_URL
+    def __init__(self, base_url=None):
+        self.base_url = (base_url or agent_settings.CLOUD_API_URL).rstrip("/")
+        self.token = ""
+        self.username = ""
+        self.password = ""
+        self.lock = threading.Lock()
 
-    def verify_release_token(self, token: str, shop_id: Optional[str] = None) -> dict:
-        """Submits 4-digit token or scanned code for cloud authorization."""
-        target_shop = shop_id or agent_settings.SHOP_ID
-        url = f"{self.base_url}/jobs/verify-token"
-        resp = requests.post(url, json={"shop_id": target_shop, "token": token}, timeout=5)
-        
-        if resp.status_code == 429:
-            raise RuntimeError(resp.json().get("detail", "Rate limit lockout triggered."))
-        elif resp.status_code != 200:
-            raise ValueError(resp.json().get("detail", "Invalid token."))
-            
-        return resp.json()
+    def login(self, username, password):
+        with self.lock:
+            response = requests.post(self.base_url + "/auth/login",
+                json={"username": username, "password": password}, timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            if result["user"]["shop_id"] != agent_settings.SHOP_ID:
+                raise ValueError("This account belongs to a different shop")
+            self.token = result["access_token"]
+            self.username, self.password = username, password
 
-    def download_staged_document(self, download_path: str, target_file_path: str) -> str:
-        """Fetches binary document using pre-signed short-lived URL."""
-        if download_path.startswith("http"):
-            url = download_path
-        else:
-            host_root = self.base_url.replace("/api/v1", "")
-            url = f"{host_root}{download_path}"
+    def request(self, method, path, **kwargs):
+        response = requests.request(method, self.base_url + path,
+            headers={"Authorization": "Bearer " + self.token}, timeout=15, **kwargs)
+        if response.status_code == 401 and self.username:
+            self.login(self.username, self.password)
+            response = requests.request(method, self.base_url + path,
+                headers={"Authorization": "Bearer " + self.token}, timeout=15, **kwargs)
+        if not response.ok:
+            raise RuntimeError(response.json().get("detail", "API request failed"))
+        return response.json()
 
-        resp = requests.get(url, stream=True, timeout=15)
-        if resp.status_code != 200:
-            raise RuntimeError(f"Failed to download print file (HTTP {resp.status_code})")
+    def verify_release_token(self, token, shop_id=None):
+        if shop_id and shop_id != agent_settings.SHOP_ID:
+            raise ValueError("Barcode belongs to another shop")
+        return self.request("POST", "/jobs/verify-token",
+                            json={"shop_id": agent_settings.SHOP_ID, "token": token})
 
-        with open(target_file_path, "wb") as f:
-            for chunk in resp.iter_content(chunk_size=64 * 1024):
-                if chunk:
-                    f.write(chunk)
-
+    def download_staged_document(self, download_path, target_file_path, expected_hash=None):
+        url = download_path if download_path.startswith(("http://", "https://")) else (
+            self.base_url.removesuffix("/api/v1") + download_path)
+        hasher = hashlib.sha256()
+        with requests.get(url, stream=True, timeout=30) as response:
+            response.raise_for_status()
+            with open(target_file_path, "wb") as target:
+                total = 0
+                for chunk in response.iter_content(64 * 1024):
+                    total += len(chunk)
+                    if total > 25 * 1024 * 1024:
+                        raise ValueError("Downloaded document exceeds size limit")
+                    hasher.update(chunk)
+                    target.write(chunk)
+        if expected_hash and hasher.hexdigest() != expected_hash:
+            raise ValueError("Downloaded document failed integrity verification")
         return target_file_path
 
-    def notify_spool_completed(self, job_id: str, status: str = "completed") -> bool:
-        """Signals backend to permanently shred the cloud blob."""
-        url = f"{self.base_url}/jobs/{job_id}/complete"
-        try:
-            resp = requests.post(url, json={"job_id": job_id, "status": status}, timeout=5)
-            return resp.status_code == 200
-        except Exception:
-            return False
+    def notify_spool_completed(self, job_id, status="completed", error_message=None):
+        # Failure raises: callers must not report a successful purge.
+        return self.request("POST", f"/jobs/{job_id}/complete",
+                            json={"job_id": job_id, "status": status, "error_message": error_message})
 
-    def fetch_shop_queue(self, shop_id: Optional[str] = None) -> list:
-        target_shop = shop_id or agent_settings.SHOP_ID
-        url = f"{self.base_url}/jobs/queue/{target_shop}"
-        try:
-            resp = requests.get(url, timeout=5)
-            if resp.status_code == 200:
-                return resp.json()
-        except Exception:
-            pass
-        return []
+    def fetch_shop_queue(self, shop_id=None):
+        return self.request("GET", f"/jobs/queue/{shop_id or agent_settings.SHOP_ID}")
+
+    def fetch_shop_profile(self, shop_id=None):
+        return self.request("GET", f"/shops/{shop_id or agent_settings.SHOP_ID}")
+
+    def confirm_output(self, job_id, notes=None):
+        return self.request("POST", f"/jobs/{job_id}/confirm-output",
+                            json={"job_id": job_id, "notes": notes})
+
+    def report_issue(self, job_id, issue_type="hardware_error", notes=None):
+        return self.request("POST", f"/jobs/{job_id}/report-issue",
+                            json={"job_id": job_id, "issue_type": issue_type, "notes": notes})
 
 
 api_client = DesktopApiClient()

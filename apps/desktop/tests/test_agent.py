@@ -35,7 +35,9 @@ def test_file_shredder():
     assert not os.path.exists(temp_path)
 
 
-def test_spooler_bridge_mock_spool():
+def test_spooler_bridge_mock_spool(monkeypatch):
+    from agent.core.config import agent_settings
+    monkeypatch.setattr(agent_settings, "MOCK_PRINTING", True)
     printers = spooler_bridge.list_installed_printers()
     assert len(printers) > 0
 
