@@ -9,9 +9,29 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.6
+      - key: DATABASE_URL
+        sync: false
+      - key: BOOTSTRAP_ADMIN_USERNAME
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: PAYMENT_PROVIDER
+        value: disabled
+      - key: ALLOW_MOCK_PAYMENTS
+        value: "false"
+      - key: ENVIRONMENT
+        value: production
+      - key: SEED_DEMO_SHOPS
+        value: "false"
+      - key: ALLOW_LOCAL_STORAGE
+        value: "false"
+      - key: ENABLE_API_DOCS
+        value: "false"
       - key: SUPABASE_URL
         sync: false
-      - key: SUPABASE_KEY
+      - key: SUPABASE_PUBLISHABLE_KEY
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false

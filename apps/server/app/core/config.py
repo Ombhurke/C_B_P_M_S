@@ -1,28 +1,35 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Optional
 import os
+from pathlib import Path
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(case_sensitive=True, env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(case_sensitive=True, env_file=Path(__file__).resolve().parents[2] / ".env", extra="ignore")
 
     PROJECT_NAME: str = "CBPMS Cloud Backend API"
     VERSION: str = "1.0.0"
     API_V1_PREFIX: str = "/api/v1"
     
     # Server & Port (Render sets $PORT dynamically)
-    HOST: str = "0.0.0.0"
+    HOST: str = "127.0.0.1"
     PORT: int = int(os.environ.get("PORT", 8000))
     
     # CORS Origins (supports local dev and Vercel domains)
-    CORS_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-        "*"
-    ]
-    CORS_ORIGIN_REGEX: Optional[str] = r"https://.*\.vercel\.app"
+    CORS_ORIGINS: List[str] = []
+    CORS_ORIGIN_REGEX: Optional[str] = None
+    DATABASE_URL: str = ""
+    ENVIRONMENT: str = "production"
+    PAYMENT_PROVIDER: str = "disabled"
+    ALLOW_MOCK_PAYMENTS: bool = False
+    ALLOW_LOCAL_STORAGE: bool = False
+    AUTH_SESSION_SECONDS: int = 8 * 60 * 60
+    BOOTSTRAP_ADMIN_USERNAME: str = ""
+    BOOTSTRAP_ADMIN_PASSWORD: str = ""
+    BOOTSTRAP_SHOP_ID: str = ""
+    SEED_DEMO_SHOPS: bool = False
+    ENABLE_API_DOCS: bool = False
+    SUPABASE_PUBLISHABLE_KEY: str = ""
     
     # Supabase Configuration
     SUPABASE_URL: Optional[str] = os.environ.get("SUPABASE_URL", None)
@@ -40,8 +47,7 @@ class Settings(BaseSettings):
     LOCKOUT_DURATION_SECONDS: int = 300  # 5 minutes
     
     # Storage Directory for Local/Staged Files (fallback)
-    TEMP_STORAGE_DIR: str = os.path.join(os.path.expanduser("~"), ".cbpms_cloud_staging")
+    TEMP_STORAGE_DIR: str = ".cbpms/files"
 
 
 settings = Settings()
-os.makedirs(settings.TEMP_STORAGE_DIR, exist_ok=True)
