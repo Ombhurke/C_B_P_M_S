@@ -1,124 +1,133 @@
 'use client';
 
-import React from 'react';
+import './landing.css';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { QRCodeSVG } from 'qrcode.react';
-import { Printer, Shield, Zap, Sparkles, ArrowRight, Smartphone, LayoutDashboard, QrCode, Lock } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowDown, ArrowRight, FileText, FolderLock, LockKeyhole, ShieldCheck } from 'lucide-react';
+import StatusHeader from '@/components/StatusHeader';
+import WorkflowSteps from '@/components/WorkflowSteps';
+import CounterQrCard from '@/components/CounterQrCard';
+import { useLandingExperience } from '@/components/landing/useLandingExperience';
 
 export default function HomePage() {
+  const [shopUrl, setShopUrl] = useState('/shops');
+  const activeSection = useLandingExperience();
+
+  useEffect(() => {
+    setShopUrl(window.location.origin + '/shops');
+  }, []);
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12 pb-24">
-      {/* Hero Section */}
-      <div className="text-center mb-12">
-        <div className="inline-flex items-center gap-2 bg-sky-500/10 border border-sky-500/20 text-sky-400 px-4 py-1.5 rounded-full text-xs font-semibold mb-4">
-          <Sparkles className="w-4 h-4 text-sky-400" />
-          <span>Cloud Based Print Management System (CBPMS)</span>
-        </div>
-        <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight max-w-2xl mx-auto leading-tight">
-          Zero-Install, Ephemeral Cloud Printing Ecosystem
-        </h1>
-        <p className="text-sm sm:text-base text-slate-400 mt-4 max-w-xl mx-auto">
-          Eliminate WhatsApp & email file sharing at copy shops. Scan counter QR, configure layout on mobile web, pay upfront, and scan to release.
-        </p>
-      </div>
-
-      {/* Counter Simulation QR Card */}
-      <div className="glass-panel-glow rounded-3xl p-6 sm:p-8 border border-sky-500/30 mb-10 shadow-2xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-          <div className="text-left space-y-4">
-            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-400">
-              <QrCode className="w-4 h-4" />
-              <span>Counter Walk-In Demo</span>
+    <div className="landing-page">
+      <a className="landing-skip-link" href="#home">Skip to content</a>
+      <StatusHeader activeSection={activeSection} />
+      <main id="landing-main">
+        <section id="home" className="landing-section landing-hero" aria-labelledby="hero-title" tabIndex={-1}>
+          <div className="landing-hero-art" aria-hidden="true">
+            <Image src="/images/hero-bg.png" alt="" fill priority sizes="100vw" />
+          </div>
+          <div className="landing-shell landing-hero-layout">
+            <div className="landing-hero-copy">
+              <p className="landing-eyebrow"><span className="landing-dot" /> A simpler way from file to paper</p>
+              <h1 id="hero-title">Print simply.<br />Keep it <em>private.</em></h1>
+              <p className="landing-lead">
+                Your documents, ready for the counter. Choose a shop, upload,
+                and print from your browser. No app. No compulsory sign-up.
+              </p>
+              <div className="landing-actions">
+                <Link href="/shops" className="landing-button landing-button-primary">
+                  Start printing <ArrowRight size={22} aria-hidden="true" />
+                </Link>
+                <a href="#workflow-section" className="landing-button landing-button-ghost">
+                  See how it works <ArrowDown size={20} aria-hidden="true" />
+                </a>
+              </div>
+              <p className="landing-hero-note"><ShieldCheck size={19} aria-hidden="true" /> Private by choice. No compulsory sign-up.</p>
             </div>
-            <h2 className="text-2xl font-bold text-white">
-              Scan Counter QR Code to Start
-            </h2>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              In a real shop, this static QR code is placed on the front counter. Customers scan it with their phone camera to instantly load the shop's pricing and upload portal.
-            </p>
-            <div className="pt-2 flex flex-col sm:flex-row gap-3">
-              <Link
-                href="/shop/shop-demo-1"
-                className="px-5 py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-sky-500/25 transition-all"
-              >
-                <span>Launch Hub 1 Customer Flow</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link
-                href="/admin/dashboard"
-                className="px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-all"
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                <span>Operator Dashboard</span>
-              </Link>
+            <div className="landing-photo-label" aria-hidden="true">
+              <span>Less friction. More focus.</span>
+              <span>From your screen to your hands.</span>
             </div>
           </div>
+          <div className="landing-section-bottom landing-shell">
+            <a href="#workflow-section" className="landing-scroll-cue">
+              <span className="landing-scroll-icon"><ArrowDown size={18} aria-hidden="true" /></span>
+              Scroll to discover
+            </a>
+            <span className="landing-section-index">01 <span>/ 04</span></span>
+          </div>
+        </section>
 
-          <div className="flex flex-col items-center justify-center bg-white p-6 rounded-3xl shadow-xl">
-            <QRCodeSVG
-              value="http://localhost:3000/shop/shop-demo-1"
-              size={180}
-              level="H"
-            />
-            <div className="text-center mt-3">
-              <div className="text-xs font-bold text-slate-900">QuickPrint Express (Hub 1)</div>
-              <div className="text-[10px] text-slate-500 font-mono">app.cbpms.io/shop/shop-demo-1</div>
+        <WorkflowSteps />
+
+        <section id="privacy-section" className="landing-section landing-privacy" aria-labelledby="privacy-title">
+          <div className="landing-shell landing-section-content">
+            <div className="landing-heading-row" data-reveal>
+              <div>
+                <p className="landing-eyebrow">Privacy, on your terms</p>
+                <h2 id="privacy-title">Your documents.<br /><em>Your choice.</em></h2>
+              </div>
+              <p className="landing-section-description">
+                Just passing through or printing regularly? Choose how your
+                files are handled, one job at a time.
+              </p>
+            </div>
+            <div className="landing-privacy-grid">
+              <article className="landing-privacy-card landing-card-paper" data-reveal>
+                <div className="landing-card-top">
+                  <span className="landing-icon-tile"><LockKeyhole size={26} aria-hidden="true" /></span>
+                  <span className="landing-card-tag">For the one-off print</span>
+                </div>
+                <div className="landing-paper-illustration" aria-hidden="true">
+                  <div className="landing-paper-sheet"><FileText size={28} /><span /><span /><span /></div>
+                  <span className="landing-paper-seal"><ShieldCheck size={24} /></span>
+                </div>
+                <div>
+                  <h3>Print. Collect. Move on.</h3>
+                  <p>Choose anonymous mode without creating an account. Temporary files are deleted after reported spooling success or job expiry.</p>
+                </div>
+                <span className="landing-card-footnote">No customer library. No account required.</span>
+              </article>
+              <article className="landing-privacy-card landing-card-library" data-reveal>
+                <div className="landing-card-top">
+                  <span className="landing-icon-tile"><FolderLock size={26} aria-hidden="true" /></span>
+                  <span className="landing-card-tag">For your everyday files</span>
+                </div>
+                <div>
+                  <h3>A library.<br />Only for you.</h3>
+                  <p>Keep account-linked documents in your private workspace for next time. Delete reusable files when you no longer need them.</p>
+                </div>
+                <Link href="/account" className="landing-text-link">Open your workspace <ArrowRight size={20} aria-hidden="true" /></Link>
+              </article>
+              <article className="landing-privacy-card landing-card-shop" data-reveal>
+                <span className="landing-icon-tile"><ShieldCheck size={26} aria-hidden="true" /></span>
+                <div>
+                  <h3>One job.<br />One chosen shop.</h3>
+                  <p>Your selected shop handles your submitted job. Uploads aren’t a public document gallery.</p>
+                </div>
+                <span className="landing-card-footnote">A release code connects you to the counter.</span>
+              </article>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Feature Pillar Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-        <div className="glass-panel p-5 rounded-3xl border border-slate-800 text-left">
-          <div className="w-10 h-10 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 mb-3">
-            <Shield className="w-5 h-5" />
+          <div className="landing-section-bottom landing-shell">
+            <span>Designed around your next print.</span>
+            <span className="landing-section-index">03 <span>/ 04</span></span>
           </div>
-          <h3 className="text-sm font-bold text-white">Zero-PII Privacy</h3>
-          <p className="text-xs text-slate-400 mt-1">
-            No phone numbers, emails, or account logins. Files are shredded instantly upon print completion.
-          </p>
-        </div>
+        </section>
 
-        <div className="glass-panel p-5 rounded-3xl border border-slate-800 text-left">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-3">
-            <Lock className="w-5 h-5" />
-          </div>
-          <h3 className="text-sm font-bold text-white">Payment Firewall</h3>
-          <p className="text-xs text-slate-400 mt-1">
-            Upfront UPI/QR checkout stops counter disputes and ensures pre-paid print spooling queues.
-          </p>
-        </div>
-
-        <div className="glass-panel p-5 rounded-3xl border border-slate-800 text-left">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3">
-            <Zap className="w-5 h-5" />
-          </div>
-          <h3 className="text-sm font-bold text-white">Sub-1.5s Release</h3>
-          <p className="text-xs text-slate-400 mt-1">
-            Store operators scan customer 2D barcode via USB scanner for instant spooler dispatch.
-          </p>
-        </div>
-      </div>
-
-      {/* Alternate Shop Hubs */}
-      <div className="text-center pt-4">
-        <div className="text-xs text-slate-500 mb-3">Available Demo Shop Profiles:</div>
-        <div className="flex justify-center gap-3 flex-wrap">
-          <Link
-            href="/shop/shop-demo-1"
-            className="text-xs bg-slate-900/90 border border-slate-800 hover:border-sky-500/50 text-slate-300 hover:text-white px-4 py-2 rounded-xl transition-all font-mono"
-          >
-            🏪 QuickPrint Express (₹2.00 B&W / ₹10.00 Color)
-          </Link>
-          <Link
-            href="/shop/shop-demo-2"
-            className="text-xs bg-slate-900/90 border border-slate-800 hover:border-sky-500/50 text-slate-300 hover:text-white px-4 py-2 rounded-xl transition-all font-mono"
-          >
-            🏬 City Copy Center (₹3.00 B&W / ₹12.00 Color)
-          </Link>
-        </div>
-      </div>
+        <section id="counter-station" className="landing-section landing-start" aria-labelledby="start-title">
+          <div className="landing-shell landing-section-content"><CounterQrCard shopUrl={shopUrl} /></div>
+          <footer className="landing-footer landing-shell">
+            <span>CBPMS <span className="landing-footer-dot">·</span> Thoughtful printing, by design.</span>
+            <div>
+              <Link href="/account">Your workspace</Link>
+              <Link href="/admin/dashboard">For operators <ArrowRight size={16} aria-hidden="true" /></Link>
+              <a href="#home" aria-label="Back to top"><ArrowDown className="landing-arrow-up" size={20} aria-hidden="true" /></a>
+            </div>
+          </footer>
+        </section>
+      </main>
     </div>
   );
 }
