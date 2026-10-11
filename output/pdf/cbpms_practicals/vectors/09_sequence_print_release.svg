@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850">
+<rect x="0" y="0" width="1200" height="850" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<rect x="35" y="32" width="6" height="50" rx="0" fill="#316452" stroke="#316452" stroke-width="1.3"/>
+<text x="56" y="51.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#316452">CBPMS / SOFTWARE ENGINEERING &amp; PROJECT MANAGEMENT</text>
+<text x="56" y="87.0" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#243832">UML sequence diagram - print release and cleanup</text>
+<text x="56" y="113.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#54665f">Scenario UC07. A paid, unexpired job is released only within its assigned shop; documents are never public.</text>
+<polyline points="35,127 1165,127" fill="none" stroke="#9aaa9f" stroke-width="1.4"/>
+<polyline points="35,797 1165,797" fill="none" stroke="#9aaa9f" stroke-width="1.4"/>
+<text x="35" y="822.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#54665f">Cloud Based Print Management System  |  Academic design model  |  09 Oct 2026</text>
+<text x="1148.32" y="824.0" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">09</text>
+<rect x="35" y="561" width="1130" height="211" rx="0" fill="#ffffff" stroke="#243832" stroke-width="1.3"/>
+<rect x="35" y="561" width="54" height="25" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<text x="43" y="577.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#243832">alt</text>
+<text x="100" y="578.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">[spool accepted]</text>
+<polyline points="35,706 1165,706" fill="none" stroke="#243832" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="102" y="723.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">[spool rejected]</text>
+<rect x="37" y="150" width="146" height="52" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="62.162" y="180.9" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Shop operator</text>
+<polyline points="110,202 110,772" fill="none" stroke="#9aaa9f" stroke-width="1.4" stroke-dasharray="5 4"/>
+<rect x="222" y="150" width="146" height="52" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="246.76999999999998" y="180.9" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Desktop agent</text>
+<polyline points="295,202 295,772" fill="none" stroke="#9aaa9f" stroke-width="1.4" stroke-dasharray="5 4"/>
+<rect x="412" y="150" width="146" height="52" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="443.364" y="180.9" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">API services</text>
+<polyline points="485,202 485,772" fill="none" stroke="#9aaa9f" stroke-width="1.4" stroke-dasharray="5 4"/>
+<rect x="607" y="150" width="146" height="52" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="648.878" y="180.9" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Database</text>
+<polyline points="680,202 680,772" fill="none" stroke="#9aaa9f" stroke-width="1.4" stroke-dasharray="5 4"/>
+<rect x="797" y="150" width="146" height="52" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="819.425" y="180.9" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Private storage</text>
+<polyline points="870,202 870,772" fill="none" stroke="#9aaa9f" stroke-width="1.4" stroke-dasharray="5 4"/>
+<rect x="1007" y="150" width="146" height="52" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="1026.317" y="180.9" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Printer / spooler</text>
+<polyline points="1080,202 1080,772" fill="none" stroke="#9aaa9f" stroke-width="1.4" stroke-dasharray="5 4"/>
+<rect x="291" y="234" width="8" height="530" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<rect x="481" y="270" width="8" height="205" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<polyline points="110,237 291,237" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="291,237 282.8912801888782,240.90495365205803 282.8912801888782,233.09504634794197" fill="#243832" stroke="#243832"/>
+<rect x="123.464" y="213" width="154.072" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="128.464" y="226.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">1. Scan / enter release PIN</text>
+<polyline points="299,279 481,279" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="481,279 472.8912801888782,282.904953652058 472.8912801888782,275.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="300.64" y="255" width="178.72" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="305.64" y="268.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">2. Claim with staff session / PIN</text>
+<polyline points="489,321 680,321" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="680,321 671.8912801888782,324.904953652058 671.8912801888782,317.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="515.648" y="297" width="137.704" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="520.648" y="310.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">3. Check + atomic claim</text>
+<polyline points="680,363 489,363" fill="none" stroke="#243832" stroke-width="1.4" stroke-dasharray="5 4"/>
+<polyline points="497.1087198111218,359.095046347942 489,363 497.1087198111218,366.904953652058" fill="none" stroke="#243832" stroke-width="1.4"/>
+<rect x="514.472" y="339" width="140.056" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="519.472" y="352.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">4. Claimed job metadata</text>
+<polyline points="481,405 299,405" fill="none" stroke="#243832" stroke-width="1.4" stroke-dasharray="5 4"/>
+<polyline points="307.1087198111218,401.095046347942 299,405 307.1087198111218,408.904953652058" fill="none" stroke="#243832" stroke-width="1.4"/>
+<rect x="317.45799999999997" y="381" width="145.084" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="322.45799999999997" y="394.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">5. Grant + expected hash</text>
+<polyline points="299,447 870,447" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="870,447 861.8912801888782,450.904953652058 861.8912801888782,443.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="426.44" y="423" width="316.12" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="431.44" y="436.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">6. Download via authorized grant (direct or API-mediated)</text>
+<polyline points="870,489 299,489" fill="none" stroke="#243832" stroke-width="1.4" stroke-dasharray="5 4"/>
+<polyline points="307.1087198111218,485.095046347942 299,489 307.1087198111218,492.904953652058" fill="none" stroke="#243832" stroke-width="1.4"/>
+<rect x="475.784" y="465" width="217.43200000000002" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="480.784" y="478.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">7. Document bytes; agent verifies hash</text>
+<polyline points="299,532 1080,532" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="1080,532 1071.8912801888782,535.904953652058 1071.8912801888782,528.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="565.94" y="508" width="247.12" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="570.94" y="521.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">8. Submit validated document + print options</text>
+<polyline points="1080,596 299,596" fill="none" stroke="#243832" stroke-width="1.4" stroke-dasharray="5 4"/>
+<polyline points="307.1087198111218,592.095046347942 299,596 307.1087198111218,599.904953652058" fill="none" stroke="#243832" stroke-width="1.4"/>
+<rect x="593.45" y="572" width="192.10000000000002" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="598.45" y="585.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">9. Spool acceptance / spool job ID</text>
+<polyline points="299,627 485,627" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="485,627 476.8912801888782,630.904953652058 476.8912801888782,623.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="328.308" y="603" width="127.384" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="333.308" y="616.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">10. Report completion</text>
+<polyline points="485,654 680,654" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="680,654 671.8912801888782,657.904953652058 671.8912801888782,650.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="505.134" y="630" width="154.732" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="510.134" y="643.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">11. Persist completed state</text>
+<polyline points="485,684 870,684" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="870,684 861.8912801888782,687.904953652058 861.8912801888782,680.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="540.7760000000001" y="660" width="273.448" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="545.7760000000001" y="673.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">12. Delete anonymous object; retain library object</text>
+<polyline points="299,757 485,757" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="485,757 476.8912801888782,760.904953652058 476.8912801888782,753.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="324.972" y="733" width="134.056" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="329.972" y="746.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">13. Report spool failure</text>
+<text x="35" y="791.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#54665f">On failure: retain cloud file until expiry. Download/hash errors abort before step 8. Always clear local files. Spooling is not physical printing.</text>
+</svg>

@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850">
+<rect x="0" y="0" width="1200" height="850" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<rect x="35" y="32" width="6" height="50" rx="0" fill="#316452" stroke="#316452" stroke-width="1.3"/>
+<text x="56" y="51.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#316452">CBPMS / SOFTWARE ENGINEERING &amp; PROJECT MANAGEMENT</text>
+<text x="56" y="87.0" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#243832">Data-flow diagram - Level 0 (context)</text>
+<text x="56" y="113.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#54665f">Boundary: CBPMS cloud platform (customer/shop web + API + private persistence). Desktop agent is outside this boundary.</text>
+<polyline points="35,127 1165,127" fill="none" stroke="#9aaa9f" stroke-width="1.4"/>
+<polyline points="35,797 1165,797" fill="none" stroke="#9aaa9f" stroke-width="1.4"/>
+<text x="35" y="822.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#54665f">Cloud Based Print Management System  |  Academic design model  |  09 Oct 2026</text>
+<text x="1148.32" y="824.0" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">04</text>
+<rect x="35" y="238" width="230" height="147" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<text x="100.9965" y="318.85" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="700" fill="#243832">Customer</text>
+<rect x="35" y="459" width="230" height="147" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<text x="92.8275" y="526.2" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="700" fill="#243832">Shop staff /</text>
+<text x="78.8205" y="553.5" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="700" fill="#243832">desktop agent</text>
+<rect x="935" y="238" width="230" height="147" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<text x="1007.9895" y="305.2" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="700" fill="#243832">Google /</text>
+<text x="973.5705" y="332.5" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="700" fill="#243832">Supabase Auth</text>
+<rect x="935" y="459" width="230" height="147" rx="0" fill="#f6e0d5" stroke="#243832" stroke-width="1.3"/>
+<text x="961.884" y="526.2" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="700" fill="#243832">Payment gateway</text>
+<text x="1002.75" y="553.5" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="700" fill="#243832">[planned]</text>
+<rect x="440" y="235" width="320" height="375" rx="12" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="592.494" y="379.3" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#243832">0</text>
+<text x="600.0" y="414.40000000000003" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#243832"></text>
+<text x="551.2515" y="449.5" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#243832">CBPMS</text>
+<text x="503.2455" y="484.6" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#243832">Cloud Platform</text>
+<polyline points="265,275 440,275" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="440,275 431.8912801888782,278.904953652058 431.8912801888782,271.095046347942" fill="#243832" stroke="#243832"/>
+<text x="284.974" y="230.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">Identity / library requests,</text>
+<text x="303.64" y="245.6" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">file, options, shop,</text>
+<text x="316.324" y="261.2" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">privacy mode</text>
+<polyline points="440,345 265,345" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="265,345 273.1087198111218,341.095046347942 273.1087198111218,348.904953652058" fill="#243832" stroke="#243832"/>
+<text x="312.646" y="313.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">Quote, receipt,</text>
+<text x="302.98" y="328.6" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">status, library data</text>
+<polyline points="265,496 440,496" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="440,496 431.8912801888782,499.904953652058 431.8912801888782,492.095046347942" fill="#243832" stroke="#243832"/>
+<text x="302.644" y="464.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">Staff session, PIN,</text>
+<text x="296.308" y="479.6" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">config, print outcome</text>
+<polyline points="440,566 265,566" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="265,566 273.1087198111218,562.095046347942 273.1087198111218,569.904953652058" fill="#243832" stroke="#243832"/>
+<text x="298.966" y="534.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">Queue data, grants,</text>
+<text x="295.972" y="549.6" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">job file, shop settings</text>
+<polyline points="760,275 935,275" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="935,275 926.8912801888782,278.904953652058 926.8912801888782,271.095046347942" fill="#243832" stroke="#243832"/>
+<text x="786.97" y="246.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">Authorization request /</text>
+<text x="806.308" y="261.6" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">code exchange</text>
+<polyline points="935,345 760,345" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="760,345 768.1087198111218,341.095046347942 768.1087198111218,348.904953652058" fill="#243832" stroke="#243832"/>
+<text x="802.648" y="316.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">Verified identity /</text>
+<text x="793.306" y="331.6" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">authentication result</text>
+<polyline points="760,496 935,496" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="935,496 926.8912801888782,499.904953652058 926.8912801888782,492.095046347942" fill="#243832" stroke="#243832"/>
+<text x="781.9780000000001" y="467.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">Order amount, currency,</text>
+<text x="796.648" y="482.6" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">verification request</text>
+<polyline points="935,566 760,566" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="760,566 768.1087198111218,562.095046347942 768.1087198111218,569.904953652058" fill="#243832" stroke="#243832"/>
+<text x="801.316" y="537.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">Order reference /</text>
+<text x="786.646" y="552.6" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">verified payment result</text>
+<rect x="35" y="669" width="550" height="60" rx="6" fill="#f7eedc" stroke="#9aaa9f" stroke-width="1.3"/>
+<text x="47" y="693.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">External entities are rectangles; the rounded process represents the entire platform.</text>
+<text x="47" y="711.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">Arrows carry named data, not execution order.</text>
+<rect x="610" y="669" width="555" height="60" rx="6" fill="#f7eedc" stroke="#9aaa9f" stroke-width="1.3"/>
+<text x="622" y="693.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">Internal databases and private object storage are hidden at context level. They</text>
+<text x="622" y="711.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">appear as data stores in Level 1.</text>
+<text x="35" y="767.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#54665f">Design scope: live payment integration is proposed; Google authentication and anonymous job mode are part of the current design.</text>
+</svg>

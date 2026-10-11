@@ -1,0 +1,269 @@
+{
+  "checked_at_utc": "2026-10-09T14:50:30.247388+00:00",
+  "configuration": {
+    "environment": "production",
+    "tls_verify_full": true,
+    "storage_service_key_present": false,
+    "auth_publishable_key_present": true,
+    "payment_provider": "disabled",
+    "local_storage_allowed": false,
+    "demo_seeding": false
+  },
+  "database": {
+    "isolation": "repeatable read",
+    "tables": [
+      {
+        "name": "attempts",
+        "rls": true,
+        "force_rls": false,
+        "owner": "postgres"
+      },
+      {
+        "name": "audit_events",
+        "rls": true,
+        "force_rls": false,
+        "owner": "postgres"
+      },
+      {
+        "name": "documents",
+        "rls": true,
+        "force_rls": false,
+        "owner": "postgres"
+      },
+      {
+        "name": "jobs",
+        "rls": true,
+        "force_rls": false,
+        "owner": "postgres"
+      },
+      {
+        "name": "sessions",
+        "rls": true,
+        "force_rls": false,
+        "owner": "postgres"
+      },
+      {
+        "name": "shops",
+        "rls": true,
+        "force_rls": false,
+        "owner": "postgres"
+      },
+      {
+        "name": "users",
+        "rls": true,
+        "force_rls": false,
+        "owner": "postgres"
+      }
+    ],
+    "columns": [
+      {
+        "table_name": "attempts",
+        "column_name": "id",
+        "data_type": "character varying",
+        "is_nullable": "NO"
+      },
+      {
+        "table_name": "attempts",
+        "column_name": "data",
+        "data_type": "jsonb",
+        "is_nullable": "NO"
+      },
+      {
+        "table_name": "audit_events",
+        "column_name": "id",
+        "data_type": "character varying",
+        "is_nullable": "NO"
+      },
+      {
+        "table_name": "audit_events",
+        "column_name": "data",
+        "data_type": "jsonb",
+        "is_nullable": "NO"
+      },
+      {
+        "table_name": "documents",
+        "column_name": "id",
+        "data_type": "character varying",
+        "is_nullable": "NO"
+      },
+      {
+        "table_name": "documents",
+        "column_name": "data",
+        "data_type": "jsonb",
+        "is_nullable": "NO"
+      },
+      {
+        "table_name": "jobs",
+        "column_name": "id",
+        "data_type": "character varying",
+        "is_nullable": "NO"
+      },
+      {
+        "table_name": "jobs",
+        "column_name": "data",
+        "data_type": "jsonb",
+        "is_nullable": "NO"
+      },
+      {
+        "table_name": "sessions",
+        "column_name": "id",
+        "data_type": "character varying",
+        "is_nullable": "NO"
+      },
+      {
+        "table_name": "sessions",
+        "column_name": "data",
+        "data_type": "jsonb",
+        "is_nullable": "NO"
+      },
+      {
+        "table_name": "shops",
+        "column_name": "id",
+        "data_type": "character varying",
+        "is_nullable": "NO"
+      },
+      {
+        "table_name": "shops",
+        "column_name": "data",
+        "data_type": "jsonb",
+        "is_nullable": "NO"
+      },
+      {
+        "table_name": "users",
+        "column_name": "id",
+        "data_type": "character varying",
+        "is_nullable": "NO"
+      },
+      {
+        "table_name": "users",
+        "column_name": "data",
+        "data_type": "jsonb",
+        "is_nullable": "NO"
+      }
+    ],
+    "constraints": [
+      {
+        "table_name": "attempts",
+        "name": "attempts_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "table_name": "audit_events",
+        "name": "audit_events_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "table_name": "documents",
+        "name": "documents_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "table_name": "jobs",
+        "name": "jobs_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "table_name": "sessions",
+        "name": "sessions_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "table_name": "shops",
+        "name": "shops_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "table_name": "users",
+        "name": "users_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (id)"
+      }
+    ],
+    "indexes": [
+      {
+        "tablename": "attempts",
+        "indexname": "attempts_pkey",
+        "indexdef": "CREATE UNIQUE INDEX attempts_pkey ON cbpms_private.attempts USING btree (id)"
+      },
+      {
+        "tablename": "audit_events",
+        "indexname": "audit_events_pkey",
+        "indexdef": "CREATE UNIQUE INDEX audit_events_pkey ON cbpms_private.audit_events USING btree (id)"
+      },
+      {
+        "tablename": "documents",
+        "indexname": "documents_pkey",
+        "indexdef": "CREATE UNIQUE INDEX documents_pkey ON cbpms_private.documents USING btree (id)"
+      },
+      {
+        "tablename": "jobs",
+        "indexname": "jobs_pkey",
+        "indexdef": "CREATE UNIQUE INDEX jobs_pkey ON cbpms_private.jobs USING btree (id)"
+      },
+      {
+        "tablename": "sessions",
+        "indexname": "sessions_pkey",
+        "indexdef": "CREATE UNIQUE INDEX sessions_pkey ON cbpms_private.sessions USING btree (id)"
+      },
+      {
+        "tablename": "shops",
+        "indexname": "shops_pkey",
+        "indexdef": "CREATE UNIQUE INDEX shops_pkey ON cbpms_private.shops USING btree (id)"
+      },
+      {
+        "tablename": "users",
+        "indexname": "users_pkey",
+        "indexdef": "CREATE UNIQUE INDEX users_pkey ON cbpms_private.users USING btree (id)"
+      }
+    ],
+    "triggers": [],
+    "runtime_role": [
+      {
+        "rolname": "postgres",
+        "rolsuper": false,
+        "rolbypassrls": true,
+        "can_create": true
+      }
+    ],
+    "browser_access": [
+      {
+        "rolname": "anon",
+        "schema_usage": false,
+        "any_table_access": false
+      },
+      {
+        "rolname": "authenticated",
+        "schema_usage": false,
+        "any_table_access": false
+      }
+    ],
+    "legacy_public_tables": [],
+    "missing_tables": [],
+    "counts": {
+      "shops": 0,
+      "jobs": 0,
+      "users": 1,
+      "sessions": 0,
+      "attempts": 0,
+      "documents": 0,
+      "audit_events": 0
+    },
+    "storage_bucket": [],
+    "storage_object_count": 0,
+    "consistency_counts": {
+      "jobs_without_shop": 0,
+      "documents_without_job": 0,
+      "documents_without_owner": 0,
+      "active_jobs_without_document": 0,
+      "owner_mismatches": 0,
+      "unpaid_released_jobs": 0,
+      "invalid_library_ownership": 0
+    }
+  }
+}

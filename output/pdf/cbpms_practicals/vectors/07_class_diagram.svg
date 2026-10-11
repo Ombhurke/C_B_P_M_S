@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850">
+<rect x="0" y="0" width="1200" height="850" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<rect x="35" y="32" width="6" height="50" rx="0" fill="#316452" stroke="#316452" stroke-width="1.3"/>
+<text x="56" y="51.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#316452">CBPMS / SOFTWARE ENGINEERING &amp; PROJECT MANAGEMENT</text>
+<text x="56" y="87.0" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#243832">UML class diagram - core domain</text>
+<text x="56" y="113.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#54665f">Conceptual object model: responsibilities and multiplicities, not the physical PostgreSQL table layout.</text>
+<polyline points="35,127 1165,127" fill="none" stroke="#9aaa9f" stroke-width="1.4"/>
+<polyline points="35,797 1165,797" fill="none" stroke="#9aaa9f" stroke-width="1.4"/>
+<text x="35" y="822.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#54665f">Cloud Based Print Management System  |  Academic design model  |  09 Oct 2026</text>
+<text x="1148.32" y="824.0" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">07</text>
+<rect x="35" y="161" width="305" height="173" rx="0" fill="#ffffff" stroke="#243832" stroke-width="1.3"/>
+<rect x="35" y="161" width="305" height="38" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="167.493" y="188.0" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="700" fill="#243832">User</text>
+<text x="48" y="223.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- id: UUID</text>
+<text x="48" y="241.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- email: String</text>
+<text x="48" y="259.4" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- role: Customer | Operator | Admin</text>
+<polyline points="35,269 340,269" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="48" y="293.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">+ canAccess(resource): Boolean</text>
+<text x="48" y="311.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">+ signOut(): void</text>
+<rect x="448" y="161" width="304" height="193" rx="0" fill="#ffffff" stroke="#243832" stroke-width="1.3"/>
+<rect x="448" y="161" width="304" height="38" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="555.999" y="188.0" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="700" fill="#243832">Document</text>
+<text x="461" y="223.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- id: UUID</text>
+<text x="461" y="241.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- ownerId: UUID [0..1]</text>
+<text x="461" y="259.4" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- hash: String; mimeType: String</text>
+<text x="461" y="277.6" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- retention: Temporary | Library</text>
+<polyline points="448,289 752,289" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="461" y="313.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">+ validate(): ValidationResult</text>
+<text x="461" y="331.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">+ deleteIfInactive(): void</text>
+<rect x="859" y="161" width="306" height="233" rx="0" fill="#ffffff" stroke="#243832" stroke-width="1.3"/>
+<rect x="859" y="161" width="306" height="38" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="975.496" y="188.0" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="700" fill="#243832">PrintJob</text>
+<text x="872" y="223.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- id: UUID; shopId: UUID</text>
+<text x="872" y="241.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- accessMode: Anonymous | Account</text>
+<text x="872" y="259.4" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- status: JobStatus; expiresAt: DateTime</text>
+<text x="872" y="277.6" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- copies: Integer; color: Boolean</text>
+<text x="872" y="295.8" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- duplex: DuplexMode; layoutNup: Integer</text>
+<polyline points="859,309 1165,309" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="872" y="333.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">+ calculatePrice(): Money</text>
+<text x="872" y="351.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">+ claim(shop): ClaimResult</text>
+<text x="872" y="369.4" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">+ complete(outcome): void</text>
+<rect x="35" y="530" width="305" height="173" rx="0" fill="#ffffff" stroke="#243832" stroke-width="1.3"/>
+<rect x="35" y="530" width="305" height="38" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<text x="165.0" y="557.0" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="700" fill="#243832">Shop</text>
+<text x="48" y="592.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- id: UUID; name: String</text>
+<text x="48" y="610.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- currency: String</text>
+<text x="48" y="628.4" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- bwRate: Decimal; colorRate: Decimal</text>
+<polyline points="35,638 340,638" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="48" y="662.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">+ updateRates(): void</text>
+<text x="48" y="680.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">+ listOwnQueue(): List&lt;PrintJob&gt;</text>
+<rect x="448" y="530" width="304" height="173" rx="0" fill="#ffffff" stroke="#243832" stroke-width="1.3"/>
+<rect x="448" y="530" width="304" height="38" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<text x="544.479" y="557.0" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="700" fill="#243832">AccessGrant</text>
+<text x="461" y="592.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- tokenHash: String</text>
+<text x="461" y="610.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- expiresAt: DateTime</text>
+<text x="461" y="628.4" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- purpose: DocumentDownload</text>
+<polyline points="448,638 752,638" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="461" y="662.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">+ isValid(now): Boolean</text>
+<text x="461" y="680.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">+ revoke(): void</text>
+<rect x="859" y="530" width="306" height="173" rx="0" fill="#ffffff" stroke="#243832" stroke-width="1.3"/>
+<rect x="859" y="530" width="306" height="38" rx="0" fill="#f6e0d5" stroke="#243832" stroke-width="1.3"/>
+<text x="949.981" y="557.0" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="700" fill="#243832">PaymentOrder</text>
+<text x="872" y="592.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- id: String; provider: String</text>
+<text x="872" y="610.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- amountMinor: Integer; currency: String</text>
+<text x="872" y="628.4" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">- status: Pending | Captured | Failed</text>
+<polyline points="859,638 1165,638" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="872" y="662.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">+ verifyCapture(): Receipt</text>
+<text x="872" y="680.2" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="400" fill="#243832">+ matches(job): Boolean</text>
+<polyline points="340,218 448,218" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="348" y="206.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">0..1</text>
+<text x="419" y="206.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">0..*</text>
+<rect x="373.996" y="222" width="38.008" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="378.996" y="235.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">owns</text>
+<polyline points="752,218 859,218" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="758" y="206.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">1</text>
+<text x="830" y="206.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">0..*</text>
+<rect x="788.328" y="222" width="35.344" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="793.328" y="235.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">uses</text>
+<polyline points="187,334 187,530" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="201" y="379.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">0..*</text>
+<text x="201" y="520.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">0..1</text>
+<rect x="133.667" y="420" width="104.666" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="138.667" y="434.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">staff assigned to</text>
+<polyline points="340,582 390,582 390,473 1060,473 1060,394" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="346" y="570.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">1</text>
+<text x="1070" y="440.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">0..*</text>
+<rect x="954.0725" y="453" width="85.855" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="959.0725" y="467.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">receives jobs</text>
+<polyline points="600,354 600,530" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="614" y="395.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">1</text>
+<text x="614" y="520.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">0..*</text>
+<rect x="558.2305" y="411" width="81.539" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="563.2305" y="425.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">protected by</text>
+<polyline points="1140,394 1140,530" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="1148" y="439.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">1</text>
+<text x="1143" y="518.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">0..1</text>
+<rect x="1115.328" y="478" width="29.344" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="1120.328" y="491.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">has</text>
+<text x="35" y="759.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#54665f">- private attribute   + public operation   |   0..1 optional   0..* many   |   Solid lines: associations</text>
+<text x="35" y="780.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#54665f">Constraints: anonymous document has no owner; each job uses one document at one shop. Live PaymentOrder adapter is planned.</text>
+</svg>

@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850">
+<rect x="0" y="0" width="1200" height="850" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<rect x="35" y="32" width="6" height="50" rx="0" fill="#316452" stroke="#316452" stroke-width="1.3"/>
+<text x="56" y="51.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#316452">CBPMS / SOFTWARE ENGINEERING &amp; PROJECT MANAGEMENT</text>
+<text x="56" y="87.0" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#243832">Control-flow diagram - submit, release and retain</text>
+<text x="56" y="113.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#54665f">Arrow direction is execution order. Every decision branch is labelled; failures do not silently become successful print jobs.</text>
+<polyline points="35,127 1165,127" fill="none" stroke="#9aaa9f" stroke-width="1.4"/>
+<polyline points="35,797 1165,797" fill="none" stroke="#9aaa9f" stroke-width="1.4"/>
+<text x="35" y="822.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#54665f">Cloud Based Print Management System  |  Academic design model  |  09 Oct 2026</text>
+<text x="1148.32" y="824.0" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">06</text>
+<rect x="220" y="149" width="220" height="40" rx="12" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="311.776" y="174.6" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">Start</text>
+<polygon points="215,215 460,215 445,265 200,265" fill="#f7eedc" stroke="#243832"/>
+<text x="225.59249999999997" y="245.25" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">Choose shop + privacy mode</text>
+<polygon points="330.0,293 433,332.0 330.0,371 227,332.0" fill="#f7eedc" stroke="#243832"/>
+<text x="273.33" y="337.25" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">Account mode?</text>
+<rect x="35" y="405" width="200" height="65" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="53.31699999999999" y="433.3" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Google sign-in if needed</text>
+<text x="64.202" y="451.5" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Retry if unsuccessful</text>
+<polygon points="301,405 516,405 501,470 286,470" fill="#f7eedc" stroke="#243832"/>
+<text x="332.8625" y="433.0" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">Upload + configure</text>
+<text x="337.2275" y="452.5" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">PDF / JPEG / PNG</text>
+<polygon points="401.0,497 503,536.0 401.0,575 299,536.0" fill="#f7eedc" stroke="#243832"/>
+<text x="334.675" y="540.9" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Valid file + options?</text>
+<polygon points="50,503 235,503 220,568 35,568" fill="#f6e0d5" stroke="#243832"/>
+<text x="63.425" y="531.3" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Show validation error</text>
+<text x="69.655" y="549.5" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Correct input / retry</text>
+<rect x="281" y="600" width="240" height="60" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="313.661" y="625.8" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Store privately + stage job</text>
+<text x="324.735" y="644.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Server calculates price</text>
+<rect x="281" y="697" width="240" height="65" rx="0" fill="#f6e0d5" stroke="#243832" stroke-width="1.3"/>
+<text x="318.47" y="725.0" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">Create / verify payment</text>
+<text x="320.5625" y="744.5" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">[live provider planned]</text>
+<polyline points="330,189 330,215" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="330,215 326.095046347942,206.89128018887823 333.904953652058,206.89128018887823" fill="#243832" stroke="#243832"/>
+<polyline points="330,265 330,293" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="330,293 326.095046347942,284.8912801888782 333.904953652058,284.8912801888782" fill="#243832" stroke="#243832"/>
+<polyline points="227,332 135,332 135,405" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="135,405 131.09504634794197,396.8912801888782 138.90495365205803,396.8912801888782" fill="#243832" stroke="#243832"/>
+<rect x="143.8005" y="308" width="32.399" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="148.8005" y="322.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">Yes</text>
+<polyline points="433,332 545,332 545,383 401,383 401,405" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="401,405 397.095046347942,396.8912801888782 404.904953652058,396.8912801888782" fill="#243832" stroke="#243832"/>
+<rect x="467.693" y="308" width="26.614" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="472.693" y="322.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">No</text>
+<polyline points="235,437 286,437" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="286,437 277.8912801888782,440.904953652058 277.8912801888782,433.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="241.5505" y="409" width="38.899" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="246.5505" y="423.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">Valid</text>
+<polyline points="401,470 401,497" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="401,497 397.095046347942,488.8912801888782 404.904953652058,488.8912801888782" fill="#243832" stroke="#243832"/>
+<polyline points="299,536 235,536" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="235,536 243.10871981112177,532.095046347942 243.10871981112177,539.904953652058" fill="#243832" stroke="#243832"/>
+<rect x="249.693" y="510" width="26.614" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="254.693" y="524.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">No</text>
+<polyline points="135,503 135,486 270,486 270,451 286,451" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="286,451 277.8912801888782,454.904953652058 277.8912801888782,447.095046347942" fill="#243832" stroke="#243832"/>
+<polyline points="401,575 401,600" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="401,600 397.095046347942,591.8912801888782 404.904953652058,591.8912801888782" fill="#243832" stroke="#243832"/>
+<rect x="412.8005" y="576" width="32.399" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="417.8005" y="590.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">Yes</text>
+<polyline points="401,660 401,697" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="401,697 397.095046347942,688.8912801888782 404.904953652058,688.8912801888782" fill="#243832" stroke="#243832"/>
+<polyline points="521,729 572,729 572,187 692,187" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="692,187 683.8912801888782,190.90495365205803 683.8912801888782,183.09504634794197" fill="#243832" stroke="#243832"/>
+<polygon points="807.0,149 922,187.0 807.0,225 692,187.0" fill="#f7eedc" stroke="#243832"/>
+<text x="757.4025" y="192.25" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">Verified paid?</text>
+<rect x="978" y="150" width="187" height="74" rx="12" fill="#f6e0d5" stroke="#243832" stroke-width="1.3"/>
+<text x="1011.2090000000001" y="173.7" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Stop: keep staged</text>
+<text x="1004.1949999999999" y="191.89999999999998" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Retry or cancel later</text>
+<text x="1022.479" y="210.1" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">No release PIN</text>
+<polyline points="922,187 978,187" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="978,187 969.8912801888782,190.90495365205803 969.8912801888782,183.09504634794197" fill="#243832" stroke="#243832"/>
+<rect x="936.693" y="162" width="26.614" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="941.693" y="176.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">No</text>
+<rect x="670" y="254" width="274" height="52" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="700.0725" y="285.25" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">Queue job + issue release PIN</text>
+<polyline points="807,225 807,254" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="807,254 803.095046347942,245.89128018887823 810.904953652058,245.89128018887823" fill="#243832" stroke="#243832"/>
+<rect x="824.8005" y="227" width="32.399" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="829.8005" y="241.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">Yes</text>
+<polygon points="807.0,332 944,374.0 807.0,416 670,374.0" fill="#f7eedc" stroke="#243832"/>
+<text x="749.817" y="369.8" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Valid shop / PIN?</text>
+<text x="725.303" y="388.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Atomic claim succeeds?</text>
+<polyline points="807,306 807,332" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="807,332 803.095046347942,323.8912801888782 810.904953652058,323.8912801888782" fill="#243832" stroke="#243832"/>
+<rect x="978" y="335" width="187" height="66" rx="12" fill="#f6e0d5" stroke="#243832" stroke-width="1.3"/>
+<text x="1009.7305" y="355.65" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#243832">Stop: claim rejected</text>
+<text x="1001.4300000000001" y="372.54999999999995" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#243832">Unauthorized / expired</text>
+<text x="1006.4805" y="389.45" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#243832">No document access</text>
+<polyline points="944,374 978,374" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="978,374 969.8912801888782,377.904953652058 969.8912801888782,370.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="947.693" y="346" width="26.614" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="952.693" y="360.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">No</text>
+<rect x="670" y="434" width="274" height="61" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="712.479" y="460.3" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Grant download; verify hash</text>
+<text x="704.303" y="478.5" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Spool to printer; clear local file</text>
+<polyline points="807,416 807,434" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="807,434 803.095046347942,425.8912801888782 810.904953652058,425.8912801888782" fill="#243832" stroke="#243832"/>
+<rect x="825.8005" y="415" width="32.399" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="830.8005" y="429.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">Yes</text>
+<polygon points="807.0,521 922,559.0 807.0,597 692,559.0" fill="#f7eedc" stroke="#243832"/>
+<text x="746.985" y="564.25" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">Spool accepted?</text>
+<polyline points="807,495 807,521" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="807,521 803.095046347942,512.8912801888782 810.904953652058,512.8912801888782" fill="#243832" stroke="#243832"/>
+<rect x="978" y="521" width="187" height="76" rx="12" fill="#f6e0d5" stroke="#243832" stroke-width="1.3"/>
+<text x="1012.9935" y="546.65" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#243832">Stop: report failure</text>
+<text x="1021.294" y="563.55" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#243832">Retain cloud file</text>
+<text x="1002.8665" y="580.4499999999999" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#243832">Retry later until expiry</text>
+<polyline points="922,559 978,559" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="978,559 969.8912801888782,562.904953652058 969.8912801888782,555.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="936.693" y="534" width="26.614" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="941.693" y="548.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">No</text>
+<rect x="671" y="622" width="273" height="68" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="745.662" y="642.7" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Report completion</text>
+<text x="709.871" y="660.9000000000001" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Anonymous: delete cloud file</text>
+<text x="707.918" y="679.1" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Account: retain private library</text>
+<polyline points="807,597 807,622" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="807,622 803.095046347942,613.8912801888782 810.904953652058,613.8912801888782" fill="#243832" stroke="#243832"/>
+<rect x="823.8005" y="598" width="32.399" height="18.900000000000002" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="828.8005" y="612.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#243832">Yes</text>
+<rect x="717" y="721" width="180" height="41" rx="12" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="791.888" y="747.1" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">End</text>
+<polyline points="807,690 807,721" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="807,721 803.095046347942,712.8912801888782 810.904953652058,712.8912801888782" fill="#243832" stroke="#243832"/>
+<text x="984" y="673.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#243832">Expiry worker:</text>
+<text x="984" y="692.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#54665f">Revoke expired grants;</text>
+<text x="984" y="706.3" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#54665f">delete temporary files.</text>
+<text x="984" y="720.6" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#54665f">Spool acceptance is not</text>
+<text x="984" y="734.9" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#54665f">physical-print confirmation.</text>
+</svg>

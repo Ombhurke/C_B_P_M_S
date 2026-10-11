@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850">
+<rect x="0" y="0" width="1200" height="850" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<rect x="35" y="32" width="6" height="50" rx="0" fill="#316452" stroke="#316452" stroke-width="1.3"/>
+<text x="56" y="51.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#316452">CBPMS / SOFTWARE ENGINEERING &amp; PROJECT MANAGEMENT</text>
+<text x="56" y="87.0" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#243832">Data-flow diagram - Level 1</text>
+<text x="56" y="113.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#54665f">Decomposition of process 0. Repeated external-entity symbols represent the same actors/services shown in the context diagram.</text>
+<polyline points="35,127 1165,127" fill="none" stroke="#9aaa9f" stroke-width="1.4"/>
+<polyline points="35,797 1165,797" fill="none" stroke="#9aaa9f" stroke-width="1.4"/>
+<text x="35" y="822.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#54665f">Cloud Based Print Management System  |  Academic design model  |  09 Oct 2026</text>
+<text x="1148.32" y="824.0" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">05</text>
+<rect x="35" y="151" width="205" height="43" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<text x="100.164" y="178.1" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">Customer</text>
+<rect x="35" y="236" width="205" height="43" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<text x="56.593999999999994" y="262.4" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Google / Supabase Auth</text>
+<rect x="480" y="164" width="255" height="104" rx="12" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="595.685" y="210.9" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="700" fill="#243832">1.0</text>
+<text x="504.04650000000004" y="233.0" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="700" fill="#243832">Manage identity &amp; access</text>
+<rect x="927" y="184" width="238" height="62" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<polyline points="939,184 939,246" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="978.0475" y="218.0" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">D1  Users / sessions</text>
+<polyline points="240,171 480,171" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="480,171 471.8912801888782,174.90495365205803 471.8912801888782,167.09504634794197" fill="#243832" stroke="#243832"/>
+<rect x="282.3385" y="150" width="135.323" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="287.3385" y="162.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Customer identity request</text>
+<polyline points="480,190 240,190" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="240,190 248.10871981112177,186.09504634794197 248.10871981112177,193.90495365205803" fill="#243832" stroke="#243832"/>
+<rect x="271.63" y="192" width="156.74" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="276.63" y="204.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Session / authentication result</text>
+<polyline points="480,240 240,240" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="240,240 248.10871981112177,236.09504634794197 248.10871981112177,243.90495365205803" fill="#243832" stroke="#243832"/>
+<rect x="271.014" y="219" width="157.972" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="276.014" y="231.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Authorization / code exchange</text>
+<polyline points="240,263 480,263" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="480,263 471.8912801888782,266.904953652058 471.8912801888782,259.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="277.1355" y="264" width="145.729" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="282.1355" y="276.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Verified identity / auth result</text>
+<rect x="35" y="320" width="205" height="76" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<text x="100.164" y="363.6" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">Customer</text>
+<rect x="480" y="320" width="255" height="76" rx="12" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="596.38" y="353.2" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">2.0</text>
+<text x="531.476" y="374.0" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">Validate &amp; stage job</text>
+<rect x="927" y="327" width="238" height="62" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<polyline points="939,327 939,389" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="956.8" y="361.0" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">D2  Jobs / files / shop data</text>
+<polyline points="240,340 480,340" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="480,340 471.8912801888782,343.904953652058 471.8912801888782,336.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="270.6065" y="320" width="170.787" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="275.6065" y="332.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">File, options, shop, privacy mode</text>
+<polyline points="480,377 240,377" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="240,377 248.10871981112177,373.095046347942 248.10871981112177,380.904953652058" fill="#243832" stroke="#243832"/>
+<rect x="284.0485" y="357" width="143.903" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="289.0485" y="369.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Price quote / staged receipt</text>
+<rect x="35" y="432" width="205" height="76" rx="0" fill="#f6e0d5" stroke="#243832" stroke-width="1.3"/>
+<text x="70.364" y="465.2" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">Payment gateway</text>
+<text x="101.5" y="486.0" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">[planned]</text>
+<rect x="480" y="432" width="255" height="76" rx="12" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="596.38" y="465.2" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">3.0</text>
+<text x="550.148" y="486.0" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">Verify payment</text>
+<rect x="927" y="439" width="238" height="62" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<polyline points="939,439 939,501" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="976.39" y="473.0" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">D3  Payment records</text>
+<polyline points="240,452 480,452" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="480,452 471.8912801888782,455.904953652058 471.8912801888782,448.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="271.217" y="432" width="169.566" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="276.217" y="444.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Order reference / captured result</text>
+<polyline points="480,489 240,489" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="240,489 248.10871981112177,485.095046347942 248.10871981112177,492.904953652058" fill="#243832" stroke="#243832"/>
+<rect x="273.967" y="469" width="164.066" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="278.967" y="481.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Order data / verification request</text>
+<rect x="35" y="544" width="205" height="76" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<text x="93.94" y="577.2" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">Shop staff /</text>
+<text x="83.268" y="598.0" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">desktop agent</text>
+<rect x="480" y="544" width="255" height="76" rx="12" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="596.38" y="577.2" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">4.0</text>
+<text x="512.812" y="598.0" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">Authorize &amp; release print</text>
+<rect x="927" y="551" width="238" height="62" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<polyline points="939,551 939,613" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="956.8" y="585.0" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">D2  Jobs / files / shop data</text>
+<polyline points="240,564 480,564" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="480,564 471.8912801888782,567.904953652058 471.8912801888782,560.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="273.0485" y="544" width="165.903" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="278.0485" y="556.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Staff session, PIN, config, result</text>
+<polyline points="480,601 240,601" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="240,601 248.10871981112177,597.095046347942 248.10871981112177,604.904953652058" fill="#243832" stroke="#243832"/>
+<rect x="286.7985" y="581" width="138.403" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="291.7985" y="593.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Queue, grant, file, settings</text>
+<rect x="35" y="656" width="205" height="76" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<text x="100.164" y="699.6" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">Customer</text>
+<rect x="480" y="656" width="255" height="76" rx="12" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="596.38" y="689.2" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">5.0</text>
+<text x="512.788" y="710.0" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#243832">Manage lifecycle / library</text>
+<rect x="927" y="663" width="238" height="62" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<polyline points="939,663 939,725" fill="none" stroke="#243832" stroke-width="1.4"/>
+<text x="956.8" y="697.0" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">D2  Jobs / files / shop data</text>
+<polyline points="240,676 480,676" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="480,676 471.8912801888782,679.904953652058 471.8912801888782,672.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="290.47249999999997" y="656" width="131.055" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="295.47249999999997" y="668.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Library / deletion request</text>
+<polyline points="480,713 240,713" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="240,713 248.10871981112177,709.095046347942 248.10871981112177,716.904953652058" fill="#243832" stroke="#243832"/>
+<rect x="273.0485" y="693" width="165.903" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="278.0485" y="705.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Job status / receipt / library data</text>
+<polyline points="735,187 927,187" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="927,187 918.8912801888782,190.90495365205803 918.8912801888782,183.09504634794197" fill="#243832" stroke="#243832"/>
+<rect x="765.17" y="168" width="131.66000000000003" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="770.17" y="180.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Identity / session records</text>
+<polyline points="927,223 735,223" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="735,223 743.1087198111218,219.09504634794197 743.1087198111218,226.90495365205803" fill="#243832" stroke="#243832"/>
+<rect x="778.9254999999999" y="204" width="104.14900000000002" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="783.9254999999999" y="216.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">User / session data</text>
+<polyline points="735,337 927,337" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="927,337 918.8912801888782,340.904953652058 918.8912801888782,333.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="770.362" y="318" width="121.276" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="775.362" y="330.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Private file / staged job</text>
+<polyline points="927,373 735,373" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="735,373 743.1087198111218,369.095046347942 743.1087198111218,376.904953652058" fill="#243832" stroke="#243832"/>
+<rect x="767.6065" y="354" width="126.787" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="772.6065" y="366.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Job / shop configuration</text>
+<polyline points="735,449 927,449" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="927,449 918.8912801888782,452.904953652058 918.8912801888782,445.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="770.9835" y="430" width="120.033" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="775.9835" y="442.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Order / receipt records</text>
+<polyline points="927,485 735,485" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="735,485 743.1087198111218,481.095046347942 743.1087198111218,488.904953652058" fill="#243832" stroke="#243832"/>
+<rect x="790.844" y="466" width="80.312" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="795.844" y="478.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Payment state</text>
+<polyline points="735,561 927,561" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="927,561 918.8912801888782,564.904953652058 918.8912801888782,557.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="762.7225" y="542" width="136.555" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="767.7225" y="554.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Claim / spool / config data</text>
+<polyline points="927,597 735,597" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="735,597 743.1087198111218,593.095046347942 743.1087198111218,600.904953652058" fill="#243832" stroke="#243832"/>
+<rect x="776.775" y="578" width="108.45000000000002" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="781.775" y="590.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Job / file / shop data</text>
+<polyline points="735,673 927,673" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="927,673 918.8912801888782,676.904953652058 918.8912801888782,669.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="758.427" y="654" width="145.146" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="763.427" y="666.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">State / retention / audit data</text>
+<polyline points="927,709 735,709" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="735,709 743.1087198111218,705.095046347942 743.1087198111218,712.904953652058" fill="#243832" stroke="#243832"/>
+<rect x="767.007" y="690" width="127.986" height="16.3" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="772.007" y="702.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#243832">Expiry / library / job data</text>
+<polyline points="607,268 607,320" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="607,320 603.095046347942,311.8912801888782 610.904953652058,311.8912801888782" fill="#243832" stroke="#243832"/>
+<rect x="676.86" y="285.0" width="142.28" height="15.0" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="681.86" y="296.0" font-family="Arial,Helvetica,sans-serif" font-size="10" font-weight="400" fill="#243832">Authorized identity / capability</text>
+<polyline points="607,396 607,432" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="607,432 603.095046347942,423.8912801888782 610.904953652058,423.8912801888782" fill="#243832" stroke="#243832"/>
+<rect x="682.005" y="405.0" width="131.99" height="15.0" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="687.005" y="416.0" font-family="Arial,Helvetica,sans-serif" font-size="10" font-weight="400" fill="#243832">Job + server-priced amount</text>
+<polyline points="607,508 607,544" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="607,544 603.095046347942,535.8912801888782 610.904953652058,535.8912801888782" fill="#243832" stroke="#243832"/>
+<rect x="707.15" y="517.0" width="81.7" height="15.0" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="712.15" y="528.0" font-family="Arial,Helvetica,sans-serif" font-size="10" font-weight="400" fill="#243832">Verified paid job</text>
+<polyline points="607,620 607,656" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="607,656 603.095046347942,647.8912801888782 610.904953652058,647.8912801888782" fill="#243832" stroke="#243832"/>
+<rect x="678.805" y="629.0" width="138.39000000000001" height="15.0" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="683.805" y="640.0" font-family="Arial,Helvetica,sans-serif" font-size="10" font-weight="400" fill="#243832">Spool result / retention policy</text>
+<text x="35" y="763.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#54665f">D2 is repeated for clarity: it is one logical group containing private files, job records, shop data and lifecycle audit information.</text>
+<text x="35" y="783.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#54665f">Staff sessions are independently authenticated. Store groups are not physical tables. Expiry scheduling is internal to process 5.0.</text>
+</svg>

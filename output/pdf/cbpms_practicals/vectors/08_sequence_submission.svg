@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850">
+<rect x="0" y="0" width="1200" height="850" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<rect x="35" y="32" width="6" height="50" rx="0" fill="#316452" stroke="#316452" stroke-width="1.3"/>
+<text x="56" y="51.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#316452">CBPMS / SOFTWARE ENGINEERING &amp; PROJECT MANAGEMENT</text>
+<text x="56" y="87.0" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#243832">UML sequence diagram - customer submission</text>
+<text x="56" y="113.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#54665f">Scenario UC02. Authentication and server validation precede payment; the browser cannot mark a job as paid.</text>
+<polyline points="35,127 1165,127" fill="none" stroke="#9aaa9f" stroke-width="1.4"/>
+<polyline points="35,797 1165,797" fill="none" stroke="#9aaa9f" stroke-width="1.4"/>
+<text x="35" y="822.0" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#54665f">Cloud Based Print Management System  |  Academic design model  |  09 Oct 2026</text>
+<text x="1148.32" y="824.0" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#243832">08</text>
+<rect x="35" y="212" width="720" height="38" rx="0" fill="#ffffff" stroke="#243832" stroke-width="1.3"/>
+<rect x="35" y="212" width="54" height="25" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<text x="43" y="228.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#243832">ref</text>
+<text x="100" y="229.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">UC01: Google sign-in only for account mode; anonymous flow skips sign-in</text>
+<rect x="35" y="558" width="1130" height="219" rx="0" fill="#ffffff" stroke="#243832" stroke-width="1.3"/>
+<rect x="35" y="558" width="54" height="25" rx="0" fill="#f7eedc" stroke="#243832" stroke-width="1.3"/>
+<text x="43" y="574.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#243832">alt</text>
+<text x="100" y="575.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">[valid captured payment, matching amount / currency / order]</text>
+<polyline points="35,691 1165,691" fill="none" stroke="#243832" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="101" y="708.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">[payment failed or provider unavailable: keep job staged]</text>
+<rect x="37" y="150" width="146" height="52" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="77.331" y="180.9" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Customer</text>
+<polyline points="110,202 110,777" fill="none" stroke="#9aaa9f" stroke-width="1.4" stroke-dasharray="5 4"/>
+<rect x="222" y="150" width="146" height="52" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="260.777" y="180.9" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Web / BFF</text>
+<polyline points="295,202 295,777" fill="none" stroke="#9aaa9f" stroke-width="1.4" stroke-dasharray="5 4"/>
+<rect x="412" y="150" width="146" height="52" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="443.364" y="180.9" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">API services</text>
+<polyline points="485,202 485,777" fill="none" stroke="#9aaa9f" stroke-width="1.4" stroke-dasharray="5 4"/>
+<rect x="607" y="150" width="146" height="52" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="648.878" y="180.9" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Database</text>
+<polyline points="680,202 680,777" fill="none" stroke="#9aaa9f" stroke-width="1.4" stroke-dasharray="5 4"/>
+<rect x="797" y="150" width="146" height="52" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<text x="819.425" y="180.9" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Private storage</text>
+<polyline points="870,202 870,777" fill="none" stroke="#9aaa9f" stroke-width="1.4" stroke-dasharray="5 4"/>
+<rect x="1007" y="150" width="146" height="52" rx="0" fill="#f6e0d5" stroke="#243832" stroke-width="1.3"/>
+<text x="1021.256" y="171.8" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">Payment gateway</text>
+<text x="1048.5" y="190.0" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#243832">[planned]</text>
+<polyline points="1080,202 1080,777" fill="none" stroke="#9aaa9f" stroke-width="1.4" stroke-dasharray="5 4"/>
+<rect x="481" y="302" width="8" height="438" rx="0" fill="#dcece4" stroke="#243832" stroke-width="1.3"/>
+<rect x="1076" y="458" width="8" height="51" rx="0" fill="#f6e0d5" stroke="#243832" stroke-width="1.3"/>
+<rect x="1076" y="536" width="8" height="62" rx="0" fill="#f6e0d5" stroke="#243832" stroke-width="1.3"/>
+<polyline points="110,280 295,280" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="295,280 286.8912801888782,283.904953652058 286.8912801888782,276.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="95.446" y="256" width="214.108" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="100.446" y="269.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">1. Shop + privacy mode + file / options</text>
+<polyline points="295,316 481,316" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="481,316 472.8912801888782,319.904953652058 472.8912801888782,312.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="306.28999999999996" y="292" width="163.42000000000002" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="311.28999999999996" y="305.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">2. Authorized upload request</text>
+<polyline points="489,345 530,345 530,369 489,369" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="489,369 497.1087198111218,365.095046347942 497.1087198111218,372.904953652058" fill="#243832" stroke="#243832"/>
+<rect x="530.596" y="344" width="300.808" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="535.596" y="357.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">3. Validate file; derive pages and price; enforce access</text>
+<polyline points="489,396 870,396" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="870,396 861.8912801888782,399.904953652058 861.8912801888782,392.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="594.466" y="372" width="170.068" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="599.466" y="385.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">4. Store validated file privately</text>
+<polyline points="489,428 680,428" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="680,428 671.8912801888782,431.904953652058 671.8912801888782,424.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="525.14" y="404" width="118.72" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="530.14" y="417.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">5. Persist staged job</text>
+<polyline points="489,466 1076,466" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="1076,466 1067.8912801888782,469.904953652058 1067.8912801888782,462.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="630.116" y="442" width="304.76800000000003" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="635.116" y="455.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">6. Create order with server-priced amount and currency</text>
+<polyline points="1076,502 489,502" fill="none" stroke="#243832" stroke-width="1.4" stroke-dasharray="5 4"/>
+<polyline points="497.1087198111218,498.095046347942 489,502 497.1087198111218,505.904953652058" fill="none" stroke="#243832" stroke-width="1.4"/>
+<rect x="662.78" y="478" width="239.44" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="667.78" y="491.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">7. Order reference / provider checkout data</text>
+<polyline points="489,540 1076,540" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="1076,540 1067.8912801888782,543.904953652058 1067.8912801888782,536.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="615.77" y="516" width="333.46000000000004" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="620.77" y="529.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">8. Verify capture after customer completes provider checkout</text>
+<polyline points="1076,592 489,592" fill="none" stroke="#243832" stroke-width="1.4" stroke-dasharray="5 4"/>
+<polyline points="497.1087198111218,588.095046347942 489,592 497.1087198111218,595.904953652058" fill="none" stroke="#243832" stroke-width="1.4"/>
+<rect x="664.79" y="568" width="235.42000000000002" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="669.79" y="581.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">9. Verified receipt (idempotent processing)</text>
+<polyline points="489,620 680,620" fill="none" stroke="#243832" stroke-width="1.4"/>
+<polygon points="680,620 671.8912801888782,623.904953652058 671.8912801888782,616.095046347942" fill="#243832" stroke="#243832"/>
+<rect x="516.296" y="596" width="136.40800000000002" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="521.296" y="609.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">10. Save paid job + PIN</text>
+<polyline points="481,650 295,650" fill="none" stroke="#243832" stroke-width="1.4" stroke-dasharray="5 4"/>
+<polyline points="303.1087198111218,646.095046347942 295,650 303.1087198111218,653.904953652058" fill="none" stroke="#243832" stroke-width="1.4"/>
+<rect x="314.46799999999996" y="626" width="147.06400000000002" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="319.46799999999996" y="639.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">11. Receipt + release PIN</text>
+<polyline points="295,678 110,678" fill="none" stroke="#243832" stroke-width="1.4" stroke-dasharray="5 4"/>
+<polyline points="118.10871981112177,674.095046347942 110,678 118.10871981112177,681.904953652058" fill="none" stroke="#243832" stroke-width="1.4"/>
+<rect x="135.97" y="654" width="133.06" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="140.97" y="667.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">12. Show receipt + PIN</text>
+<polyline points="481,734 295,734" fill="none" stroke="#243832" stroke-width="1.4" stroke-dasharray="5 4"/>
+<polyline points="303.1087198111218,730.095046347942 295,734 303.1087198111218,737.904953652058" fill="none" stroke="#243832" stroke-width="1.4"/>
+<rect x="311.3" y="710" width="153.4" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="316.3" y="723.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">13. Payment not confirmed</text>
+<polyline points="295,763 110,763" fill="none" stroke="#243832" stroke-width="1.4" stroke-dasharray="5 4"/>
+<polyline points="118.10871981112177,759.095046347942 110,763 118.10871981112177,766.904953652058" fill="none" stroke="#243832" stroke-width="1.4"/>
+<rect x="145.144" y="739" width="114.71200000000002" height="17.6" rx="0" fill="#ffffff" stroke="#ffffff" stroke-width="1.3"/>
+<text x="150.144" y="752.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#243832">14. Show safe error</text>
+<text x="35" y="792.0" font-family="Arial,Helvetica,sans-serif" font-size="10" font-weight="400" fill="#54665f">Solid arrow: request/call. Dashed open arrow: response. Narrow bar: activation. alt: alternative outcomes. ref: referenced interaction.</text>
+</svg>

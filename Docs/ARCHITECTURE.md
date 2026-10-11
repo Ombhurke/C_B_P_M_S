@@ -1,4 +1,5 @@
 # System Architecture & Technical Blueprint
+> Historical design proposal. Start with [IMPLEMENTATION_HANDOFF.md](IMPLEMENTATION_HANDOFF.md) and [DATABASE_AND_DASHBOARD_AUDIT.md](DATABASE_AND_DASHBOARD_AUDIT.md) for current scope and observed architecture. The original public SQL schema and mobile-first descriptions below are legacy material, not instructions to rebuild or seed the current database.
 ## Project Name: Cloud Based Print Management System (CBPMS)
 
 ---
