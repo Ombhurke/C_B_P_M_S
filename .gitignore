@@ -25,6 +25,10 @@ htmlcov/
 # CBPMS Ephemeral Sandboxes
 .cbpms_cloud_staging/
 cbpms_spool/
+.cbpms/
+*.tsbuildinfo
+tmp/
+.next-verify/
 
 # Environment variables
 .env
