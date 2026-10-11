@@ -1,191 +1,202 @@
-import { Shop, CostCalculation, StagedJobResponse, PaymentSuccessResponse, PrintConfig } from './types';
+import {
+  Shop,
+  CostCalculation,
+  StagedJobResponse,
+  PrintConfig,
+  CustomerDocument,
+  CustomerJob,
+  AccessMode,
+} from './types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+export const API_BASE_URL = '/api/backend';
 
-// Mock shops for instant offline/standalone preview
-const MOCK_SHOPS: Record<string, Shop> = {
-  'shop-demo-1': {
-    id: 'shop-demo-1',
-    name: 'QuickPrint Express - Hub 1',
-    email: 'counter1@quickprint.io',
-    phone: '+91 98765 43210',
-    address: 'University North Gate, Block A',
-    base_bw_rate: 2.0,
-    base_color_rate: 10.0,
-    duplex_discount: 0.5,
-    currency: 'INR',
-    is_active: true,
-    printers: [
-      {
-        id: 'p-1',
-        shop_id: 'shop-demo-1',
-        device_name: 'HP LaserJet Pro M404dn (High-Speed B&W)',
-        is_color_supported: false,
-        is_duplex_supported: true,
-        max_paper_size: 'A4',
-        status: 'online'
-      },
-      {
-        id: 'p-2',
-        shop_id: 'shop-demo-1',
-        device_name: 'Canon imageRUNNER C3226 (Color Laser)',
-        is_color_supported: true,
-        is_duplex_supported: true,
-        max_paper_size: 'A3',
-        status: 'online'
-      }
-    ]
-  },
-  'shop-demo-2': {
-    id: 'shop-demo-2',
-    name: 'City Copy & Print Center',
-    email: 'citycopy@printcenter.com',
-    phone: '+91 91234 56789',
-    address: 'Main Market Commercial Plaza #4',
-    base_bw_rate: 3.0,
-    base_color_rate: 12.0,
-    duplex_discount: 1.0,
-    currency: 'INR',
-    is_active: true,
-    printers: [
-      {
-        id: 'p-3',
-        shop_id: 'shop-demo-2',
-        device_name: 'Epson EcoTank L6490',
-        is_color_supported: true,
-        is_duplex_supported: true,
-        max_paper_size: 'A4',
-        status: 'online'
-      }
-    ]
+export class ApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message);
   }
-};
-
-export async function fetchShop(shopId: string): Promise<Shop> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/shops/${shopId}`, { cache: 'no-store' });
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.warn(`Backend API unreachable at ${API_BASE_URL}, using mock shop context.`);
-  }
-  return MOCK_SHOPS[shopId] || {
-    ...MOCK_SHOPS['shop-demo-1'],
-    id: shopId,
-    name: `Print Shop (${shopId})`
-  };
 }
 
-export async function calculateCost(shop: Shop, config: PrintConfig): Promise<CostCalculation> {
-  const baseRate = config.isColor ? shop.base_color_rate : shop.base_bw_rate;
-  const effectivePages = Math.ceil(config.pageCount / config.layoutNup);
-  
-  let sheetsPerCopy = effectivePages;
-  let totalCost = 0;
-  let discount = 0;
-
-  if (config.duplexMode !== 'simplex') {
-    sheetsPerCopy = Math.ceil(effectivePages / 2);
-    const totalSheets = sheetsPerCopy * config.copyCount;
-    const rawCost = totalSheets * 2 * baseRate;
-    discount = totalSheets * (shop.duplex_discount || 0);
-    totalCost = Math.max(0, rawCost - discount);
-  } else {
-    const totalSheets = sheetsPerCopy * config.copyCount;
-    totalCost = totalSheets * baseRate;
+export async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
+  const headers = new Headers(options.headers);
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+    credentials: 'same-origin',
+    cache: 'no-store',
+    signal: options.signal || AbortSignal.timeout(40000),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new ApiError(typeof data.detail === 'string' ? data.detail : 'Request could not be completed', response.status);
   }
-
-  return {
-    page_count: config.pageCount,
-    copy_count: config.copyCount,
-    is_color: config.isColor,
-    duplex_mode: config.duplexMode,
-    layout_nup: config.layoutNup,
-    sheets_per_copy: sheetsPerCopy,
-    total_sheets: sheetsPerCopy * config.copyCount,
-    rate_per_page: baseRate,
-    discount: Number(discount.toFixed(2)),
-    total_cost: Number(totalCost.toFixed(2)),
-    currency: shop.currency || 'INR'
-  };
+  return data as T;
 }
 
-export async function stagePrintJob(shopId: string, config: PrintConfig): Promise<StagedJobResponse> {
-  const formData = new FormData();
-  formData.append('shop_id', shopId);
-  formData.append('page_count', config.pageCount.toString());
-  formData.append('copy_count', config.copyCount.toString());
-  formData.append('is_color', config.isColor.toString());
-  formData.append('duplex_mode', config.duplexMode);
-  formData.append('layout_nup', config.layoutNup.toString());
-  formData.append('page_range', config.pageRange);
-  
-  if (config.file) {
-    formData.append('file', config.file);
-  } else {
-    // Generate dummy file if none selected for preview
-    formData.append('file', new Blob(['dummy content'], { type: 'application/pdf' }), config.fileName);
-  }
+export function fetchShops(): Promise<Shop[]> {
+  return request<Shop[]>('/shops');
+}
 
-  try {
-    const res = await fetch(`${API_BASE_URL}/jobs/stage`, {
-      method: 'POST',
-      body: formData
-    });
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.warn('Backend API offline, generating local staged job session.');
-  }
+export function fetchShop(shopId: string): Promise<Shop> {
+  return request<Shop>(`/shops/${encodeURIComponent(shopId)}`);
+}
 
-  // Fallback local staged job simulation
-  const jobId = `job-${Math.random().toString(36).substring(2, 10)}`;
-  return {
-    job_id: jobId,
+function form(shopId: string, config: PrintConfig) {
+  const body = new FormData();
+  const values = {
     shop_id: shopId,
-    file_name: config.fileName,
-    file_size_bytes: config.fileSize,
     page_count: config.pageCount,
     copy_count: config.copyCount,
     is_color: config.isColor,
     duplex_mode: config.duplexMode,
     layout_nup: config.layoutNup,
-    total_cost: 20.00,
-    currency: 'INR',
-    payment_status: 'pending',
-    job_status: 'staged'
+    paper_type: config.paperType || 'normal',
   };
+  Object.entries(values).forEach(([key, value]) => body.append(key, String(value)));
+  return body;
 }
 
-export async function verifyPayment(jobId: string, paymentId: string): Promise<PaymentSuccessResponse> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/jobs/verify-payment`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        job_id: jobId,
-        payment_id: paymentId,
-        payment_method: 'UPI_QR'
-      })
-    });
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.warn('Backend offline, generating local release token.');
-  }
+export function calculateCost(shop: Shop, config: PrintConfig): Promise<CostCalculation> {
+  return request('/jobs/calculate-cost', { method: 'POST', body: form(shop.id, config) });
+}
 
-  const token = Math.floor(1000 + Math.random() * 9000).toString();
-  return {
-    job_id: jobId,
-    shop_id: 'shop-demo-1',
-    release_token: token,
-    barcode_payload: `CBPMS:shop-demo-1:${token}:${jobId}`,
-    total_cost: 20.00,
-    payment_status: 'completed',
-    job_status: 'queued',
-    expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
-  };
+export function stagePrintJob(
+  shopId: string,
+  config: PrintConfig,
+  accessMode: AccessMode = 'anonymous',
+  token?: string,
+): Promise<StagedJobResponse> {
+  if (!config.file) throw new Error('Select a document first');
+  const body = form(shopId, config);
+  body.append('file', config.file);
+  body.append('page_range', config.pageRange);
+  body.append('access_mode', accessMode);
+  return request('/jobs/stage', { method: 'POST', body }, token);
+}
+
+export interface PaymentOrder {
+  id: string;
+  provider: string;
+  amount_minor: number;
+  currency: string;
+}
+
+export function createPaymentOrder(job: StagedJobResponse): Promise<PaymentOrder> {
+  return request(`/payments/${job.job_id}/order`, {
+    method: 'POST',
+    headers: { 'X-Checkout-Token': job.checkout_token },
+  });
+}
+
+export interface LoginSession {
+  access_token: string;
+  user: { username: string; shop_id: string; role: 'admin' | 'operator' };
+}
+
+export function login(username: string, password: string): Promise<LoginSession> {
+  return request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export function uploadCustomerDocument(file: File): Promise<CustomerDocument> {
+  const body = new FormData();
+  body.append('file', file);
+  return request('/customer/documents', { method: 'POST', body });
+}
+
+export interface DocumentQueryParams {
+  q?: string;
+  type?: string;
+  sort?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export function fetchCustomerDocuments(params?: DocumentQueryParams): Promise<CustomerDocument[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.q) searchParams.set('q', params.q);
+  if (params?.type) searchParams.set('type', params.type);
+  if (params?.sort) searchParams.set('sort', params.sort);
+  if (params?.limit) searchParams.set('limit', String(params.limit));
+  if (params?.offset) searchParams.set('offset', String(params.offset));
+  const query = searchParams.toString();
+  return request(`/customer/documents${query ? `?${query}` : ''}`);
+}
+
+export function listCustomerDocuments(): Promise<CustomerDocument[]> {
+  return fetchCustomerDocuments();
+}
+
+export function fetchCustomerDocument(documentId: string): Promise<CustomerDocument> {
+  return request(`/customer/documents/${encodeURIComponent(documentId)}`);
+}
+
+export function deleteCustomerDocument(documentId: string): Promise<{ deleted: boolean; document_id?: string }> {
+  return request(`/customer/documents/${encodeURIComponent(documentId)}`, { method: 'DELETE' });
+}
+
+export interface JobQueryParams {
+  status?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export function fetchCustomerJobs(params?: JobQueryParams): Promise<CustomerJob[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.status) searchParams.set('status', params.status);
+  if (params?.limit) searchParams.set('limit', String(params.limit));
+  if (params?.offset) searchParams.set('offset', String(params.offset));
+  const query = searchParams.toString();
+  return request(`/customer/jobs${query ? `?${query}` : ''}`);
+}
+
+export function listCustomerJobs(): Promise<CustomerJob[]> {
+  return fetchCustomerJobs();
+}
+
+export function fetchCustomerJob(jobId: string): Promise<CustomerJob> {
+  return request(`/customer/jobs/${encodeURIComponent(jobId)}`);
+}
+
+export interface QueueItem {
+  id: string;
+  file_name: string;
+  page_count: number;
+  copy_count: number;
+  copies?: number;
+  is_color: boolean;
+  total_cost: number;
+  total_amount_in_inr?: number;
+  job_status: string;
+  duplex_mode?: string;
+  paper_type?: string;
+  layout_nup?: number;
+  customer_phone?: string;
+  cleanup_pending?: boolean;
+  created_at: string;
+}
+
+export interface Summary {
+  date_utc: string;
+  total_jobs: number;
+  completed_jobs: number;
+  failed_jobs: number;
+  cleanup_pending: number;
+  paid_total: number;
+}
+
+export interface ActivityEvent {
+  id: string;
+  action: string;
+  actor?: string | null;
+  target?: string | null;
+  created_at: string;
+  status?: string | null;
+}
+
+export function fetchShopActivity(shopId: string, token: string): Promise<ActivityEvent[]> {
+  return request(`/shops/${encodeURIComponent(shopId)}/activity`, {}, token);
 }

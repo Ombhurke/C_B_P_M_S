@@ -2,33 +2,37 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { Shop, PrintConfig, CostCalculation, StagedJobResponse, PaymentSuccessResponse } from '@/lib/types';
-import { fetchShop, calculateCost, stagePrintJob, verifyPayment } from '@/lib/api';
+import { Shop, PrintConfig, CostCalculation, StagedJobResponse, PaymentSuccessResponse, AccessMode } from '@/lib/types';
+import { fetchShop, calculateCost, stagePrintJob, createPaymentOrder, PaymentOrder } from '@/lib/api';
 import UploadBox from '@/components/customer/UploadBox';
 import PrintConfigSelector from '@/components/customer/PrintConfigSelector';
 import PriceSummaryCard from '@/components/customer/PriceSummaryCard';
 import PaymentModal from '@/components/customer/PaymentModal';
 import ReleaseTokenCard from '@/components/customer/ReleaseTokenCard';
-import { Printer, MapPin, Phone, Shield, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import ShopBanner from '@/components/customer/ShopBanner';
+import ShopPrivacySelector from '../../../components/customer/ShopPrivacySelector';
+import { useCustomerAuth } from '../../../components/customer/CustomerAuthContext';
+import { ShieldCheck, Printer, Zap } from 'lucide-react';
 
 export default function ShopCustomerPortal() {
   const params = useParams();
-  const shopId = (params?.shop_id as string) || 'shop-demo-1';
+  const shopId = params?.shop_id as string;
+  const { session } = useCustomerAuth();
 
   const [shop, setShop] = useState<Shop | null>(null);
   const [isLoadingShop, setIsLoadingShop] = useState(true);
 
   const [config, setConfig] = useState<PrintConfig>({
     file: null,
-    fileName: 'lecture_notes_unit3.pdf',
-    fileSize: 1.4 * 1024 * 1024,
-    pageCount: 6,
+    fileName: '',
+    fileSize: 0,
+    pageCount: 1,
     copyCount: 1,
     isColor: false,
     duplexMode: 'simplex',
     layoutNup: 1,
-    pageRange: 'all'
+    pageRange: 'all',
+    paperType: 'normal'
   });
 
   const [costCalc, setCostCalc] = useState<CostCalculation | null>(null);
@@ -36,182 +40,194 @@ export default function ShopCustomerPortal() {
   const [isStaging, setIsStaging] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState<PaymentSuccessResponse | null>(null);
+  const [order, setOrder] = useState<PaymentOrder | null>(null);
+  const [error, setError] = useState('');
+  const [accessMode, setAccessMode] = useState<AccessMode>('anonymous');
 
-  // Load shop profile
   useEffect(() => {
     async function load() {
       setIsLoadingShop(true);
-      const data = await fetchShop(shopId);
-      setShop(data);
-      setIsLoadingShop(false);
+      try { setShop(await fetchShop(shopId)); }
+      catch (err) { setError(err instanceof Error ? err.message : 'Shop unavailable'); }
+      finally { setIsLoadingShop(false); }
     }
     load();
   }, [shopId]);
 
-  // Recalculate price whenever config or shop changes
   useEffect(() => {
-    if (shop) {
-      calculateCost(shop, config).then(setCostCalc);
+    let active = true;
+    if (shop && config.file) {
+      calculateCost(shop, config)
+        .then(res => { if (active) setCostCalc(res); })
+        .catch(() => { if (active) setCostCalc(null); });
+    } else {
+      setCostCalc(null);
     }
+    return () => { active = false; };
   }, [shop, config]);
 
-  const handleFileSelect = (file: File, extractedPages: number) => {
+  const handleFileSelect = (file: File, pages: number) => {
     setConfig(prev => ({
       ...prev,
       file,
       fileName: file.name,
       fileSize: file.size,
-      pageCount: extractedPages
+      pageCount: pages
     }));
+    setStagedJob(null);
+    setOrder(null);
   };
 
   const handleClearFile = () => {
-    setConfig(prev => ({
-      ...prev,
-      file: null,
-      pageCount: 1
-    }));
+    setConfig(prev => ({ ...prev, file: null, fileName: '', fileSize: 0, pageCount: 1 }));
+    setCostCalc(null);
     setStagedJob(null);
+    setOrder(null);
   };
 
   const handleConfigUpdate = (updated: Partial<PrintConfig>) => {
     setConfig(prev => ({ ...prev, ...updated }));
+    setStagedJob(null);
+    setOrder(null);
   };
 
   const handleStartPayment = async () => {
-    if (!shop) return;
+    if (!shop || !config.file) return;
     setIsStaging(true);
+    setError('');
     try {
-      const staged = await stagePrintJob(shop.id, config);
+      if (accessMode === 'account' && !session) throw new Error('Sign in or choose anonymous mode before continuing');
+      const staged = stagedJob || await stagePrintJob(shop.id, config, accessMode);
       setStagedJob(staged);
+      setConfig(prev => ({ ...prev, pageCount: staged.page_count }));
+      setOrder(await createPaymentOrder(staged));
       setIsPaymentOpen(true);
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : 'Checkout could not be created');
     } finally {
       setIsStaging(false);
     }
   };
 
-  const handlePaymentConfirmed = async (paymentId: string) => {
-    setIsPaymentOpen(false);
-    if (!stagedJob) return;
-    const res = await verifyPayment(stagedJob.job_id, paymentId);
-    setPaymentSuccess(res);
-  };
-
   if (isLoadingShop) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" />
+        <div className="w-12 h-12 border-4 border-[#ea7c50]/30 border-t-[#ea7c50] rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 pb-20">
-      {/* Top Header */}
-      <header className="flex items-center justify-between mb-6">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>All Locations</span>
-        </Link>
-        <div className="flex items-center gap-1.5 text-[11px] bg-slate-900 border border-slate-800 text-sky-400 px-3 py-1 rounded-full font-mono">
-          <Shield className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Privacy Verified</span>
-        </div>
-      </header>
-
-      {/* Shop Profile Banner */}
-      {shop && (
-        <div className="glass-panel p-5 rounded-3xl mb-6 border border-slate-800 flex items-start justify-between">
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-sky-400">
-              Counter Print Station
-            </div>
-            <h1 className="text-xl font-bold text-white mt-0.5">{shop.name}</h1>
-            <div className="flex items-center gap-4 text-xs text-slate-400 mt-2 flex-wrap">
-              {shop.address && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                  {shop.address}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="text-right bg-slate-900/80 border border-slate-800 p-2.5 rounded-2xl">
-            <div className="text-[10px] text-slate-400 uppercase font-semibold">Standard Rates</div>
-            <div className="text-xs font-mono font-bold text-white mt-0.5">
-              B&W: {shop.currency} {shop.base_bw_rate.toFixed(2)}
-            </div>
-            <div className="text-xs font-mono font-bold text-indigo-400">
-              Color: {shop.currency} {shop.base_color_rate.toFixed(2)}
-            </div>
-          </div>
-        </div>
+    <div className="desktop-workspace py-8 pb-24 text-[#fbf9f5]">
+      {error && (
+        <p role="alert" className="bg-[#451a1a]/70 border border-[#f87171]/30 text-[#fca5a5] rounded-2xl p-4 mb-6 text-sm">
+          {error}
+        </p>
       )}
 
-      {/* Main Flow: Config vs Success Screen */}
+      {/* Full-Width Shop Header */}
+      <ShopBanner shop={shop} />
+
       {!paymentSuccess ? (
-        <div className="space-y-6">
-          {/* Step 1: File Upload */}
-          <section>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-6 h-6 rounded-full bg-sky-500/20 text-sky-400 text-xs font-bold flex items-center justify-center border border-sky-500/30">
-                1
-              </span>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-white">
-                Select Document
-              </h2>
-            </div>
-            <UploadBox
-              onFileSelect={handleFileSelect}
-              onClear={handleClearFile}
-              selectedFile={config.file}
-              pageCount={config.pageCount}
+        /* 2-Column Desktop Workstation Grid */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Upload & Configurations (8 cols) */}
+          <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+            <ShopPrivacySelector
+              accessMode={accessMode}
+              onModeChange={mode => { setAccessMode(mode); setStagedJob(null); setOrder(null); }}
+              session={session}
             />
-          </section>
 
-          {/* Step 2: Print Settings */}
-          <section>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-6 h-6 rounded-full bg-sky-500/20 text-sky-400 text-xs font-bold flex items-center justify-center border border-sky-500/30">
-                2
-              </span>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-white">
-                Configure Layout & Colors
-              </h2>
-            </div>
-            <PrintConfigSelector
-              config={config}
-              onChange={handleConfigUpdate}
-              isColorSupported={shop?.printers.some(p => p.is_color_supported)}
-              isDuplexSupported={shop?.printers.some(p => p.is_duplex_supported)}
-            />
-          </section>
+            {/* Step 1: File Upload */}
+            <section className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="w-7 h-7 rounded-xl bg-[#ea7c50]/20 text-[#ea7c50] text-xs font-bold flex items-center justify-center border border-[#ea7c50]/30">
+                  1
+                </span>
+                <h2 className="text-base font-bold uppercase tracking-wider text-[#fbf9f5]">
+                  Select or Drop Document
+                </h2>
+              </div>
+              <UploadBox
+                onFileSelect={handleFileSelect}
+                onClear={handleClearFile}
+                selectedFile={config.file}
+                pageCount={config.pageCount}
+              />
+            </section>
 
-          {/* Step 3: Cost Calculation & Payment Trigger */}
-          <section>
+            {/* Step 2: Print Settings */}
+            <section className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="w-7 h-7 rounded-xl bg-[#ea7c50]/20 text-[#ea7c50] text-xs font-bold flex items-center justify-center border border-[#ea7c50]/30">
+                  2
+                </span>
+                <h2 className="text-base font-bold uppercase tracking-wider text-[#fbf9f5]">
+                  Configure Print Layout & Options
+                </h2>
+              </div>
+              <PrintConfigSelector
+                config={config}
+                onChange={handleConfigUpdate}
+                isBwSupported={shop?.supports_bw ?? true}
+                isColorSupported={shop?.supports_color ?? shop?.printers.some(p => p.is_color_supported)}
+                isDuplexSupported={shop?.supports_duplex ?? shop?.printers.some(p => p.is_duplex_supported)}
+                supportedLayouts={shop?.supported_layouts ?? [1, 2, 4, 8]}
+                paperRates={shop?.paper_rates}
+              />
+            </section>
+          </div>
+
+          {/* Right Column: Sticky Live Price & Order Summary (4 cols) */}
+          <div className="lg:col-span-5 xl:col-span-4 sticky top-6 space-y-6">
             <PriceSummaryCard
+              disabled={!config.file || !shop}
               calculation={costCalc}
               onProceedToPayment={handleStartPayment}
               isLoading={isStaging}
             />
-          </section>
+
+            {/* Station Trust & Hardware Details */}
+            <div className="p-6 rounded-3xl bg-white/5 border border-white/10 space-y-3.5 text-xs text-neutral-300">
+              <div className="flex items-center gap-2 font-bold text-white text-sm">
+                <Printer className="w-4 h-4 text-[#ea7c50]" />
+                <span>Station Hardware Status</span>
+              </div>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between py-1 border-b border-white/5">
+                  <span className="text-neutral-400">Available Printers:</span>
+                  <span className="font-mono text-white font-medium">{shop?.printers.filter(p => p.status === 'online').length || 0} Online</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-white/5">
+                  <span className="text-neutral-400">Default Paper:</span>
+                  <span className="font-mono text-white font-medium">A4 (80 GSM) Standard</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-neutral-400">Release Protocol:</span>
+                  <span className="font-mono text-[#34d399] font-medium">Barcode / 4-Digit PIN</span>
+                </div>
+              </div>
+              <div className="pt-2 flex items-center gap-2 text-neutral-300 border-t border-white/5">
+                <ShieldCheck className="w-4 h-4 text-[#34d399] flex-shrink-0" />
+                <span>Zero permanent document retention. Shredded upon counter dispatch.</span>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
-        <ReleaseTokenCard data={paymentSuccess} fileName={config.fileName} />
+        /* Success Screen */
+        <div className="max-w-4xl mx-auto py-6">
+          <ReleaseTokenCard data={paymentSuccess} fileName={config.fileName} />
+        </div>
       )}
 
-      {/* Upfront Payment Modal */}
-      {costCalc && (
+      {/* Payment Modal */}
+      {order && (
         <PaymentModal
           isOpen={isPaymentOpen}
-          totalCost={costCalc.total_cost}
-          currency={costCalc.currency}
-          onConfirm={handlePaymentConfirmed}
+          totalCost={order.amount_minor / 100}
+          currency={order.currency}
           onClose={() => setIsPaymentOpen(false)}
         />
       )}
