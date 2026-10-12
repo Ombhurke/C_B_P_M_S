@@ -1,152 +1,252 @@
-import getpass
 import os
 import sys
 import threading
+from PySide6.QtWidgets import QApplication, QMessageBox, QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton
+from PySide6.QtCore import QObject, Signal, Slot
 
 from agent.core.config import agent_settings
 from agent.core.api_client import api_client
 from agent.core.ws_client import DesktopWebSocketClient
-from agent.core.completion_outbox import CompletionOutbox
-from agent.scanner.barcode_hook import BarcodeScannerHook
+from agent.core.lifecycle import PrintLifecycleManager, JobLifecycleStage
 from agent.spooler.win32_spooler import spooler_bridge
-from agent.shredder.file_shredder import file_shredder
-from agent.ui.dashboard import DesktopDashboard, HAS_PYSIDE
+from agent.ui.shell import CounterDeskShell
 
 
-class DesktopAgentApp:
-    def __init__(self):
+class DesktopAgentController(QObject):
+    # Signals for thread-safe UI updates
+    data_refreshed = Signal()
+    review_ready = Signal(dict, str)  # job, preview_path
+    print_completed = Signal(dict, str)  # job, spool_id
+    error_occurred = Signal(str)
+    info_occurred = Signal(str)
+
+    def __init__(self, shell: CounterDeskShell, app: QApplication):
+        super().__init__()
+        self.shell = shell
+        self.app = app
         self.selected_printer = agent_settings.SELECTED_PRINTER_NAME
-        self.active_queue = []
-        self.release_lock = threading.Lock()
-        self.completion_outbox = CompletionOutbox(agent_settings.LOCAL_STATE_DIR)
-        self.scanner_hook = BarcodeScannerHook()
-        self.dashboard = DesktopDashboard(on_release_callback=self.start_release,
-                                          on_printer_change=self.handle_printer_change)
-        self.ws_client = DesktopWebSocketClient(on_event_callback=self.handle_ws_event)
+        self.shop_profile = {}
+        self.summary_data = {}
+        self.queue_jobs = []
+        self.team_members = []
+        self.installed_printers = []
 
-    def handle_printer_change(self, printer_name):
-        self.selected_printer = printer_name
+        self.lifecycle = PrintLifecycleManager(
+            on_stage_change=self._on_lifecycle_stage,
+            on_log=self._on_lifecycle_log
+        )
+        self.ws_client = DesktopWebSocketClient(on_event_callback=self._handle_ws_event)
 
-    def handle_ws_event(self, event, data):
+        self._wire_signals()
+
+    def _wire_signals(self):
+        self.data_refreshed.connect(self._apply_data_to_views)
+        self.review_ready.connect(self._apply_review_ready)
+        self.print_completed.connect(self._apply_print_completed)
+        self.error_occurred.connect(self._show_error_dialog)
+        self.info_occurred.connect(self._show_info_dialog)
+
+        # Connect Shell signals
+        self.shell.scan_submitted.connect(self.handle_find_review)
+        self.shell.print_submitted.connect(self.handle_submit_print)
+        self.shell.confirm_output_submitted.connect(self.handle_confirm_output)
+        self.shell.report_problem_submitted.connect(self.handle_report_problem)
+        self.shell.hold_submitted.connect(self.handle_hold_job)
+        self.shell.abandon_review_submitted.connect(self.handle_abandon_review)
+        self.shell.rates_saved.connect(self.handle_save_rates)
+        self.shell.staff_invited.connect(self.handle_invite_staff)
+        self.shell.profile_updated.connect(self.handle_update_profile)
+        self.shell.map_printer_submitted.connect(self.handle_printer_change)
+        self.shell.reconnect_submitted.connect(self.refresh_all_data)
+        self.shell.retry_sync_submitted.connect(self.handle_retry_sync)
+        self.shell.sign_out_submitted.connect(self.handle_sign_out)
+
+    def _handle_ws_event(self, event, data):
         if event != "PONG":
-            self.refresh_queue()
+            self.refresh_all_data()
 
-    def refresh_queue(self):
-        try:
-            self.flush_completion_outbox()
-            self.active_queue = api_client.fetch_shop_queue()
-            self.dashboard.update_queue(self.active_queue)
-        except Exception as exc:
-            self.dashboard.log(f"Queue unavailable: {exc}")
+    def _on_lifecycle_stage(self, stage: str, data: dict):
+        pass
 
-    def flush_completion_outbox(self):
-        for pending in self.completion_outbox.pending():
+    def _on_lifecycle_log(self, message: str):
+        print(f"[CounterDesk Lifecycle] {message}")
+
+    def refresh_all_data(self):
+        def worker():
             try:
-                api_client.notify_spool_completed(pending["job_id"], pending["status"], pending.get("error_message"))
-                self.completion_outbox.acknowledge(pending)
-                self.dashboard.log(f"Recovered server result for {pending['job_id']} without reprinting.")
+                self.lifecycle.flush_outbox()
+                self.installed_printers = spooler_bridge.list_installed_printers()
+                self.shop_profile = api_client.fetch_shop_profile()
+                self.summary_data = api_client.fetch_shop_summary()
+                self.queue_jobs = api_client.fetch_shop_queue()
+                self.team_members = api_client.fetch_team()
+                self.data_refreshed.emit()
             except Exception as exc:
-                self.dashboard.log(f"Pending result for {pending['job_id']} remains queued: {exc}")
+                self.error_occurred.emit(f"Data refresh failed: {exc}")
+        threading.Thread(target=worker, daemon=True).start()
 
-    def start_release(self, raw_input):
-        if not self.release_lock.acquire(blocking=False):
-            self.dashboard.log("A release is already running; please wait.")
-            return
-        def work():
-            try:
-                self.handle_release_request(raw_input)
-            finally:
-                self.release_lock.release()
-        threading.Thread(target=work, daemon=False).start()
+    @Slot()
+    def _apply_data_to_views(self):
+        shop_name = self.shop_profile.get("name", "QuickPrints")
+        role = getattr(api_client, "role", "operator")
+        is_owner = (role == "admin")
 
-    def handle_release_request(self, raw_input):
-        shop_id, token = self.scanner_hook.parse_payload(raw_input)
-        if not token:
-            self.dashboard.log("Enter a valid PIN or barcode.")
-            return
-        job = None
-        local_path = None
-        status = "failed"
-        failure_message = None
-        try:
-            job = api_client.verify_release_token(token, shop_id)
-            self.dashboard.active_job = job
-            if HAS_PYSIDE and getattr(self.dashboard, 'review_file_lbl', None):
-                self.dashboard.review_file_lbl.setText(job.get("file_name", "Document"))
-                specs = f"{job.get('page_count', 1)} pages · {'Color' if job.get('is_color') else 'B&W'} · {job.get('duplex_mode', 'simplex')} · {job.get('paper_type', 'normal').upper()}"
-                self.dashboard.review_specs_lbl.setText(specs)
-            local_path = os.path.join(agent_settings.LOCAL_SPOOL_DIR,
-                                      job["job_id"] + os.path.splitext(job["file_name"])[1])
-            api_client.download_staged_document(job["download_url"], local_path, job["file_hash"])
-            if HAS_PYSIDE and getattr(self.dashboard, 'stage1_lbl', None):
-                self.dashboard.stage1_lbl.setText("Stage 1: Verified Document Download — Completed (SHA-256 Validated)")
-            if not spooler_bridge.spool_job(self.selected_printer, local_path, job):
-                raise RuntimeError("Printer did not accept the job")
-            if HAS_PYSIDE and getattr(self.dashboard, 'stage2_lbl', None):
-                self.dashboard.stage2_lbl.setText(f"Stage 2: Windows Spooler Submission — Sent to {self.selected_printer}")
-            status = "completed"
-            self.dashboard.log("Document accepted by spooler; physical output is not yet confirmed.")
-            if HAS_PYSIDE and getattr(self.dashboard, 'stage3_lbl', None):
-                self.dashboard.stage3_lbl.setText("Stage 3: Physical Output Confirmation — Awaiting Operator Verification")
-        except Exception as exc:
-            failure_message = str(exc)
-            if HAS_PYSIDE and getattr(self.dashboard, 'stage2_lbl', None):
-                self.dashboard.stage2_lbl.setText(f"Stage 2: Submission Failed — {exc}")
-            self.dashboard.log(f"Release failed: {exc}")
-        finally:
-            if local_path and os.path.exists(local_path):
-                if not file_shredder.shred_and_delete(local_path):
-                    self.dashboard.log("Local cleanup failed; operator attention required.")
+        self.shell.update_top_bar(shop_name, "Station Alpha", role, True)
+
+        is_printer_ready = bool(self.selected_printer in self.installed_printers)
+        self.shell.v_overview.update_data(self.queue_jobs, self.summary_data, self.selected_printer, is_printer_ready)
+        self.shell.v_queue.update_queue(self.queue_jobs)
+        self.shell.v_printers.update_printers(self.installed_printers, self.shop_profile.get("printers", []), self.selected_printer)
+        self.shell.v_rates.update_rates(self.shop_profile, is_owner)
+        self.shell.v_team.update_data(self.team_members, self.shop_profile, is_owner)
+
+        pending_items = self.lifecycle.completion_outbox.pending()
+        self.shell.v_recovery.update_data(pending_items, [])
+        self.shell.v_settings.set_station_info(
+            api_client.username, role, shop_name, agent_settings.SHOP_ID,
+            self.installed_printers, self.selected_printer, len(pending_items)
+        )
+
+    def handle_find_review(self, raw_input: str):
+        def worker():
+            job = self.lifecycle.find_and_review(raw_input)
             if job:
-                try:
-                    if failure_message:
-                        result = api_client.notify_spool_completed(job["job_id"], status, failure_message)
-                    else:
-                        result = api_client.notify_spool_completed(job["job_id"], status)
-                    if status == "failed":
-                        self.dashboard.log("Job retained for retry until expiry.")
-                    elif result.get("shredded"):
-                        self.dashboard.log("Cloud file deletion confirmed.")
-                    else:
-                        self.dashboard.log("Spooling recorded; cloud deletion is pending.")
-                except Exception as exc:
-                    self.completion_outbox.enqueue(job["job_id"], status, failure_message)
-                    self.dashboard.log(
-                        f"Result for {job['job_id']} is uncertain: {status}. "
-                        f"Callback queued for retry ({exc}); do not reprint automatically.")
-                self.refresh_queue()
-
-    def run(self):
-        printers = spooler_bridge.list_installed_printers()
-        if HAS_PYSIDE:
-            self.dashboard.launch(printers, [])
-            username, password = self.dashboard.login_credentials()
-        else:
-            username = agent_settings.OPERATOR_USERNAME or input("Operator username: ")
-            password = agent_settings.OPERATOR_PASSWORD or getpass.getpass("Operator password: ")
-        try:
-            api_client.login(username, password)
-            self.refresh_queue()
-            self.ws_client.start()
-        except Exception as exc:
-            self.dashboard.log(f"[Security] Unauthorized access or sign-in failed: {exc}. Closing application.")
-            if HAS_PYSIDE and self.dashboard.window:
-                self.dashboard.window.close()
-            return
-        try:
-            if HAS_PYSIDE:
-                self.dashboard.app.exec()
+                preview_path = self.lifecycle.local_file_path or ""
+                self.review_ready.emit(job, preview_path)
             else:
-                while True:
-                    value = input("PIN / barcode (exit to quit)> ").strip()
-                    if value.lower() in ("exit", "quit"):
-                        break
-                    self.handle_release_request(value)
-        except (KeyboardInterrupt, EOFError):
-            pass
-        finally:
-            self.ws_client.stop()
+                self.error_occurred.emit("Could not authorize job for review. Verify release code and shop match.")
+        threading.Thread(target=worker, daemon=True).start()
+
+    @Slot(dict, str)
+    def _apply_review_ready(self, job: dict, preview_path: str):
+        self.shell.v_review.set_job(job, preview_path, self.installed_printers, self.selected_printer)
+        self.shell.navigate_to("review")
+
+    def handle_submit_print(self, printer_name: str):
+        def worker():
+            success = self.lifecycle.submit_print(printer_name)
+            if success:
+                self.print_completed.emit(self.lifecycle.active_job, self.lifecycle.active_spool_id or "")
+            else:
+                self.error_occurred.emit("Print dispatch could not be completed. Check printer compatibility and connection.")
+        threading.Thread(target=worker, daemon=True).start()
+
+    @Slot(dict, str)
+    def _apply_print_completed(self, job: dict, spool_id: str):
+        self.shell.v_monitor.set_active_job(job, spool_id, self.selected_printer)
+        self.shell.navigate_to("monitor")
+
+    def handle_confirm_output(self, notes: str):
+        def worker():
+            self.lifecycle.confirm_output(notes)
+            self.refresh_all_data()
+            self.info_occurred.emit("Output confirmed. Customer document processed.")
+        threading.Thread(target=worker, daemon=True).start()
+
+    def handle_report_problem(self, issue_type: str, notes: str):
+        def worker():
+            self.lifecycle.report_issue(issue_type, notes)
+            self.refresh_all_data()
+            self.info_occurred.emit("Issue reported. Document retained in recovery.")
+        threading.Thread(target=worker, daemon=True).start()
+
+    def handle_hold_job(self, job_id: str, reason: str):
+        def worker():
+            try:
+                api_client.reject_job(job_id, reason)
+                self.refresh_all_data()
+                self.info_occurred.emit(f"Job {job_id} held with reason: {reason}")
+            except Exception as exc:
+                self.error_occurred.emit(f"Failed to hold job: {exc}")
+        threading.Thread(target=worker, daemon=True).start()
+
+    def handle_abandon_review(self):
+        def worker():
+            self.lifecycle.abandon_claim()
+            self.refresh_all_data()
+        threading.Thread(target=worker, daemon=True).start()
+
+    def handle_save_rates(self, payload: dict):
+        def worker():
+            try:
+                api_client.update_rates(payload)
+                self.refresh_all_data()
+                self.info_occurred.emit("Shop rates updated successfully.")
+            except Exception as exc:
+                self.error_occurred.emit(f"Failed to save rates: {exc}")
+        threading.Thread(target=worker, daemon=True).start()
+
+    def handle_invite_staff(self, username: str, role: str, password: str):
+        def worker():
+            try:
+                api_client.invite_team_member(username, role, password)
+                self.refresh_all_data()
+                self.info_occurred.emit(f"Staff member {username} invited successfully.")
+            except Exception as exc:
+                self.error_occurred.emit(f"Failed to add staff member: {exc}")
+        threading.Thread(target=worker, daemon=True).start()
+
+    def handle_update_profile(self, payload: dict):
+        def worker():
+            try:
+                api_client.update_profile(payload)
+                self.refresh_all_data()
+                self.info_occurred.emit("Shop profile updated successfully.")
+            except Exception as exc:
+                self.error_occurred.emit(f"Failed to update profile: {exc}")
+        threading.Thread(target=worker, daemon=True).start()
+
+    def handle_printer_change(self, printer_name: str):
+        self.selected_printer = printer_name
+        self._apply_data_to_views()
+
+    def handle_retry_sync(self):
+        def worker():
+            flushed = self.lifecycle.flush_outbox()
+            self.refresh_all_data()
+            self.info_occurred.emit(f"Result sync flushed {flushed} pending items (no reprinting).")
+        threading.Thread(target=worker, daemon=True).start()
+
+    def handle_sign_out(self):
+        self.ws_client.stop()
+        self.app.quit()
+
+    @Slot(str)
+    def _show_error_dialog(self, message: str):
+        QMessageBox.warning(self.shell, "Counter Desk Alert", message)
+
+    @Slot(str)
+    def _show_info_dialog(self, message: str):
+        QMessageBox.information(self.shell, "Counter Desk", message)
+
+
+def prompt_credentials():
+    username = agent_settings.OPERATOR_USERNAME
+    password = agent_settings.OPERATOR_PASSWORD
+    return username, password
+
+
+def run_app():
+    app = QApplication(sys.argv)
+    shell = CounterDeskShell()
+    controller = DesktopAgentController(shell, app)
+
+    username, password = prompt_credentials()
+    if not username or not password:
+        print("[Desktop Agent] Missing credentials in .env.", file=sys.stderr)
+        return
+
+    try:
+        api_client.login(username, password)
+        controller.refresh_all_data()
+        controller.ws_client.start()
+        shell.show()
+    except Exception as exc:
+        QMessageBox.critical(None, "Sign-In Failed", f"Sign-in rejected: {exc}")
+        return
+
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":
-    DesktopAgentApp().run()
+    run_app()

@@ -19,10 +19,11 @@ class CompletionOutbox:
         safe = "".join(ch for ch in job_id if ch.isalnum() or ch in "-_ ").strip().replace(" ", "_")
         return self.directory / f"completion-{safe}.json"
 
-    def enqueue(self, job_id, status, error_message=None):
+    def enqueue(self, job_id, status, error_message=None, action_type="confirm_output", notes=None, issue_type="hardware_error"):
         if status not in ("completed", "failed"):
             raise ValueError("completion status must be completed or failed")
         payload = {"job_id": job_id, "status": status, "error_message": error_message,
+                   "action_type": action_type, "notes": notes, "issue_type": issue_type,
                    "created_at": time.time(), "attempts": 0}
         fd, temp_name = tempfile.mkstemp(prefix="completion-", suffix=".tmp", dir=self.directory)
         try:

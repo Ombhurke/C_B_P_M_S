@@ -24,6 +24,10 @@ class DesktopWebSocketClient:
 
     async def _listen(self):
         url = f"{agent_settings.CLOUD_WS_URL}/{agent_settings.SHOP_ID}"
+        if url.startswith("ws://localhost:"):
+            url = url.replace("ws://localhost:", "ws://127.0.0.1:", 1)
+        elif url.startswith("wss://localhost:"):
+            url = url.replace("wss://localhost:", "wss://127.0.0.1:", 1)
         while self.is_running:
             try:
                 # Reconcile on reconnect, including token refresh after session expiry.

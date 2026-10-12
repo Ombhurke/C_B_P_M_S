@@ -6,7 +6,14 @@ from agent.core.config import agent_settings
 
 class DesktopApiClient:
     def __init__(self, base_url=None):
-        self.base_url = (base_url or agent_settings.CLOUD_API_URL).rstrip("/")
+        url = (base_url or agent_settings.CLOUD_API_URL).rstrip("/")
+        # On Windows, 'localhost' often resolves to IPv6 '::1' first,
+        # which throws WinError 10061 if uvicorn is listening on IPv4 (127.0.0.1).
+        if url.startswith("http://localhost:"):
+            url = url.replace("http://localhost:", "http://127.0.0.1:", 1)
+        elif url.startswith("https://localhost:"):
+            url = url.replace("https://localhost:", "https://127.0.0.1:", 1)
+        self.base_url = url
         self.token = ""
         self.username = ""
         self.password = ""
@@ -14,14 +21,44 @@ class DesktopApiClient:
 
     def login(self, username, password):
         with self.lock:
-            response = requests.post(self.base_url + "/auth/login",
-                json={"username": username, "password": password}, timeout=10)
-            response.raise_for_status()
-            result = response.json()
-            if result["user"]["shop_id"] != agent_settings.SHOP_ID:
-                raise ValueError("This account belongs to a different shop")
-            self.token = result["access_token"]
-            self.username, self.password = username, password
+            last_conn_error = None
+            import time
+            for attempt in range(3):
+                try:
+                    response = requests.post(
+                        self.base_url + "/auth/login",
+                        json={"username": username, "password": password},
+                        timeout=10,
+                    )
+                    if response.status_code == 401:
+                        raise ValueError("Invalid operator username or password")
+                    response.raise_for_status()
+                    result = response.json()
+                    if result["user"]["shop_id"] != agent_settings.SHOP_ID:
+                        raise ValueError(
+                            f"Account belongs to shop '{result['user']['shop_id']}', but this agent is configured for '{agent_settings.SHOP_ID}'"
+                        )
+                    self.token = result["access_token"]
+                    self.username, self.password = username, password
+                    self.role = result.get("user", {}).get("role", "operator")
+                    self.user_data = result.get("user", {})
+                    return
+                except (requests.ConnectionError, requests.Timeout) as exc:
+                    last_conn_error = exc
+                    if attempt < 2:
+                        time.sleep(1.0)
+                except requests.HTTPError as exc:
+                    detail = ""
+                    try:
+                        detail = exc.response.json().get("detail", "")
+                    except Exception:
+                        pass
+                    raise RuntimeError(f"Authentication rejected by server ({detail or exc})") from exc
+
+            raise ConnectionError(
+                f"Could not connect to backend server at {self.base_url}. "
+                f"Please ensure uvicorn is running on port 8000. (Details: {last_conn_error})"
+            )
 
     def request(self, method, path, **kwargs):
         response = requests.request(method, self.base_url + path,
@@ -39,6 +76,9 @@ class DesktopApiClient:
             raise ValueError("Barcode belongs to another shop")
         return self.request("POST", "/jobs/verify-token",
                             json={"shop_id": agent_settings.SHOP_ID, "token": token})
+
+    def abandon_job_claim(self, job_id):
+        return self.request("POST", f"/jobs/{job_id}/abandon-claim")
 
     def download_staged_document(self, download_path, target_file_path, expected_hash=None):
         url = download_path if download_path.startswith(("http://", "https://")) else (
@@ -59,15 +99,24 @@ class DesktopApiClient:
         return target_file_path
 
     def notify_spool_completed(self, job_id, status="completed", error_message=None):
-        # Failure raises: callers must not report a successful purge.
         return self.request("POST", f"/jobs/{job_id}/complete",
                             json={"job_id": job_id, "status": status, "error_message": error_message})
 
     def fetch_shop_queue(self, shop_id=None):
         return self.request("GET", f"/jobs/queue/{shop_id or agent_settings.SHOP_ID}")
 
+    def fetch_shop_summary(self, shop_id=None):
+        return self.request("GET", f"/jobs/summary/{shop_id or agent_settings.SHOP_ID}")
+
     def fetch_shop_profile(self, shop_id=None):
         return self.request("GET", f"/shops/{shop_id or agent_settings.SHOP_ID}")
+
+    def fetch_job_detail(self, job_id, shop_id=None):
+        return self.request("GET", f"/shops/{shop_id or agent_settings.SHOP_ID}/jobs/{job_id}")
+
+    def reject_job(self, job_id, reason, shop_id=None):
+        return self.request("POST", f"/shops/{shop_id or agent_settings.SHOP_ID}/jobs/{job_id}/reject",
+                            json={"reason": reason})
 
     def confirm_output(self, job_id, notes=None):
         return self.request("POST", f"/jobs/{job_id}/confirm-output",
@@ -76,6 +125,31 @@ class DesktopApiClient:
     def report_issue(self, job_id, issue_type="hardware_error", notes=None):
         return self.request("POST", f"/jobs/{job_id}/report-issue",
                             json={"job_id": job_id, "issue_type": issue_type, "notes": notes})
+
+    def fetch_printers(self, shop_id=None):
+        return self.request("GET", f"/shops/{shop_id or agent_settings.SHOP_ID}/printers")
+
+    def add_printer(self, printer_payload, shop_id=None):
+        return self.request("POST", f"/shops/{shop_id or agent_settings.SHOP_ID}/printers",
+                            json=printer_payload)
+
+    def fetch_stations(self, shop_id=None):
+        return self.request("GET", f"/shops/{shop_id or agent_settings.SHOP_ID}/stations")
+
+    def fetch_team(self, shop_id=None):
+        return self.request("GET", f"/shops/{shop_id or agent_settings.SHOP_ID}/team")
+
+    def invite_team_member(self, username, role, password, shop_id=None):
+        return self.request("POST", f"/shops/{shop_id or agent_settings.SHOP_ID}/team",
+                            json={"username": username, "role": role, "password": password})
+
+    def update_rates(self, rates_payload, shop_id=None):
+        return self.request("PATCH", f"/shops/{shop_id or agent_settings.SHOP_ID}",
+                            json=rates_payload)
+
+    def update_profile(self, profile_payload, shop_id=None):
+        return self.request("PATCH", f"/shops/{shop_id or agent_settings.SHOP_ID}/profile",
+                            json=profile_payload)
 
 
 api_client = DesktopApiClient()

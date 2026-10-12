@@ -1,15 +1,20 @@
 import os
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AgentSettings(BaseSettings):
-    model_config = SettingsConfigDict(case_sensitive=True, env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        case_sensitive=True,
+        env_file=Path(__file__).resolve().parents[2] / ".env",
+        extra="ignore"
+    )
 
     SHOP_ID: str = os.environ.get("SHOP_ID", "shop-demo-1")
     # Point to your Render service e.g. https://your-cbpms.onrender.com/api/v1
-    CLOUD_API_URL: str = os.environ.get("CLOUD_API_URL", "http://localhost:8000/api/v1")
+    CLOUD_API_URL: str = os.environ.get("CLOUD_API_URL", "http://127.0.0.1:8000/api/v1")
     # Point to your Render WebSocket e.g. wss://your-cbpms.onrender.com/ws/queue
-    CLOUD_WS_URL: str = os.environ.get("CLOUD_WS_URL", "ws://localhost:8000/ws/queue")
+    CLOUD_WS_URL: str = os.environ.get("CLOUD_WS_URL", "ws://127.0.0.1:8000/ws/queue")
     
     # Sandboxed temporary print spool directory on Windows
     LOCAL_SPOOL_DIR: str = os.path.join(
