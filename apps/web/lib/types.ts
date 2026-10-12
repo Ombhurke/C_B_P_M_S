@@ -60,6 +60,8 @@ export interface PrintConfig {
   layoutNup: number;
   pageRange: string;
   paperType: 'normal' | 'bond';
+  folderFiles?: File[];
+  isFolder?: boolean;
 }
 
 export interface CostCalculation {
@@ -103,6 +105,7 @@ export interface PaymentSuccessResponse {
   barcode_payload: string;
   total_cost: number;
   payment_status: string;
+  payment_method?: string;
   job_status: JobStatus;
   expires_at: string;
 }
@@ -114,6 +117,7 @@ export interface CustomerUser {
   alias_chosen?: boolean;
   shop_id: null;
   role: 'customer';
+  provider?: string;
 }
 
 export interface CustomerSession {
@@ -144,6 +148,7 @@ export interface CustomerJob {
   total_cost: number;
   currency: string;
   payment_status: string;
+  payment_method?: string | null;
   job_status: JobStatus;
   created_at: string;
   expires_at: string;

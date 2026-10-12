@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, Search, FileText, ChevronRight, Clock, CheckCircle2, AlertCircle, Inbox } from 'lucide-react';
+import { Plus, Search, FileText, ChevronRight, Clock, CheckCircle2, AlertCircle, Inbox, Store } from 'lucide-react';
 import { fetchCustomerJobs } from '@/lib/api';
 import { CustomerJob } from '@/lib/types';
 import { useCustomerAuth } from '@/components/customer/CustomerAuthContext';
@@ -63,7 +63,7 @@ export default function CustomerJobsPage() {
     <div className="min-h-screen bg-[#f7f4ee] text-[#241814] flex flex-col">
       <CustomerWorkspaceHeader currentTab="jobs" />
 
-      <main className="flex-1 max-w-[1640px] 2xl:max-w-[1760px] w-full mx-auto px-6 sm:px-10 lg:px-14 xl:px-20 py-10 sm:py-14 space-y-10 sm:space-y-12">
+      <main className="flex-1 w-full px-[clamp(24px,3.2vw,88px)] py-10 sm:py-14 space-y-10 sm:space-y-12">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
             <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] xl:text-[3.75rem] font-serif text-[#241814] font-normal tracking-tight leading-tight">
@@ -184,15 +184,25 @@ export default function CustomerJobsPage() {
                           </td>
                           <td className="py-4 px-4 text-[#66554b] font-mono text-xs">{job.shop_id}</td>
                           <td className="py-4 px-4 whitespace-nowrap">
-                            {job.payment_status === 'pending' ? (
+                            {job.job_status === 'completed' ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Completed</span>
+                              </span>
+                            ) : job.payment_method === 'counter' ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fdf3ea] text-[#8c4320] border border-[#f5d0b5] text-xs font-semibold">
+                                <Store className="w-3.5 h-3.5 text-[#c05634]" />
+                                <span>Pay at counter</span>
+                              </span>
+                            ) : job.payment_status === 'completed' || job.payment_status === 'paid' ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Payment verified</span>
+                              </span>
+                            ) : job.payment_status === 'pending' ? (
                               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#faebe6] text-[#b85333] text-xs font-semibold">
                                 <Clock className="w-3.5 h-3.5" />
                                 <span>Awaiting payment</span>
-                              </span>
-                            ) : job.job_status === 'completed' ? (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold">
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>Completed</span>
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 text-neutral-700 text-xs font-semibold">

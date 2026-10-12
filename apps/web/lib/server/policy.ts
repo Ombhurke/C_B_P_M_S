@@ -45,11 +45,28 @@ export function allowedRoute(method: string, parts: string[]): boolean {
   if (!parts.length || parts.some(part => !/^[a-zA-Z0-9_-]{1,128}$/.test(part))) return false;
   const path = parts.join('/');
   const rules: Record<string, RegExp[]> = {
-    GET: [/^shops(?:\/[\w-]+(?:\/(?:printers|activity))?)?$/, /^jobs\/(?:queue|summary)\/[\w-]+$/,
-      /^jobs\/[\w-]+\/status$/, /^customer\/(?:documents|jobs)(?:\/[\w-]+)?$/, /^customer\/documents\/[\w-]+\/download$/],
-    POST: [/^auth\/(?:login|logout|users)$/, /^jobs\/(?:calculate-cost|stage)$/, /^payments\/[\w-]+\/order$/, /^customer\/documents$/],
-    PATCH: [/^shops\/[\w-]+$/, /^customer\/alias$/],
-    DELETE: [/^customer\/documents\/[\w-]+$/],
+    GET: [
+      /^shops(?:\/[\w-]+(?:\/(?:printers|stations|team|activity|jobs\/[\w-]+))?)?$/,
+      /^jobs\/(?:queue|summary)\/[\w-]+$/,
+      /^jobs\/[\w-]+\/status$/,
+      /^customer\/(?:documents|jobs)(?:\/[\w-]+)?$/,
+      /^customer\/documents\/[\w-]+\/download$/,
+    ],
+    POST: [
+      /^auth\/(?:login|logout|users)$/,
+      /^jobs\/(?:calculate-cost|stage|stage-folder)$/,
+      /^payments\/[\w-]+\/(?:order|verify|pay-at-counter)$/,
+      /^customer\/documents(?:\/batch)?$/,
+      /^shops\/[\w-]+\/(?:printers|stations|team)$/,
+      /^shops\/[\w-]+\/jobs\/[\w-]+\/reject$/,
+    ],
+    PATCH: [
+      /^shops\/[\w-]+(?:\/(?:profile|printers\/[\w-]+|stations\/[\w-]+))?$/,
+      /^customer\/alias$/,
+    ],
+    DELETE: [
+      /^customer\/documents\/[\w-]+$/,
+    ],
   };
   return (rules[method] || []).some(rule => rule.test(path));
 }

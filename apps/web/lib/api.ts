@@ -6,6 +6,7 @@ import {
   CustomerDocument,
   CustomerJob,
   AccessMode,
+  PaymentSuccessResponse,
 } from './types';
 
 export const API_BASE_URL = '/api/backend';
@@ -66,10 +67,18 @@ export function stagePrintJob(
   accessMode: AccessMode = 'anonymous',
   token?: string,
 ): Promise<StagedJobResponse> {
+  if (config.isFolder && config.folderFiles && config.folderFiles.length > 0) {
+    const body = form(shopId, config);
+    body.append('folder_name', config.fileName || 'Folder_Bundle');
+    body.append('access_mode', accessMode);
+    config.folderFiles.forEach((file) => body.append('files', file));
+    return request('/jobs/stage-folder', { method: 'POST', body }, token);
+  }
+
   if (!config.file) throw new Error('Select a document first');
   const body = form(shopId, config);
   body.append('file', config.file);
-  body.append('page_range', config.pageRange);
+  body.append('page_range', 'all');
   body.append('access_mode', accessMode);
   return request('/jobs/stage', { method: 'POST', body }, token);
 }
@@ -79,12 +88,53 @@ export interface PaymentOrder {
   provider: string;
   amount_minor: number;
   currency: string;
+  key_id?: string;
+}
+
+export interface RazorpayVerificationPayload {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
 }
 
 export function createPaymentOrder(job: StagedJobResponse): Promise<PaymentOrder> {
   return request(`/payments/${job.job_id}/order`, {
     method: 'POST',
     headers: { 'X-Checkout-Token': job.checkout_token },
+  });
+}
+
+export function verifyPayment(
+  job: StagedJobResponse,
+  payload: RazorpayVerificationPayload,
+): Promise<PaymentSuccessResponse> {
+  return request(`/payments/${job.job_id}/verify`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Checkout-Token': job.checkout_token,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function payAtCounter(job: StagedJobResponse): Promise<PaymentSuccessResponse> {
+  return request(`/payments/${job.job_id}/pay-at-counter`, {
+    method: 'POST',
+    headers: {
+      'X-Checkout-Token': job.checkout_token,
+    },
+  });
+}
+
+export function mockConfirmPayment(job: StagedJobResponse, orderId: string): Promise<PaymentSuccessResponse> {
+  return request(`/payments/${job.job_id}/mock-confirm`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Checkout-Token': job.checkout_token,
+    },
+    body: JSON.stringify({ order_id: orderId }),
   });
 }
 
@@ -105,6 +155,12 @@ export function uploadCustomerDocument(file: File): Promise<CustomerDocument> {
   const body = new FormData();
   body.append('file', file);
   return request('/customer/documents', { method: 'POST', body });
+}
+
+export function uploadCustomerDocumentsBatch(files: File[]): Promise<CustomerDocument[]> {
+  const body = new FormData();
+  files.forEach((f) => body.append('files', f));
+  return request('/customer/documents/batch', { method: 'POST', body });
 }
 
 export interface DocumentQueryParams {

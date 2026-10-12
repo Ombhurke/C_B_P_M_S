@@ -16,8 +16,12 @@ export async function GET(request: NextRequest) {
     });
     if (!response.ok) return finish(NextResponse.json({ detail: response.status === 403 ? 'This CBPMS account is disabled.' : 'Your workspace is unavailable. Please try again.' }, { status: response.status === 403 ? 403 : 503 }));
     const user = await response.json();
-    const userAlias = user.alias || (typeof user.username === 'string' ? user.username.slice(0, 6) : undefined);
-    return finish(NextResponse.json({ session: { user: { id: user.id, username: user.username, alias: userAlias, alias_chosen: Boolean(user.alias_chosen), shop_id: null, role: 'customer' } } }));
+    const defaultAlias = typeof user.username === 'string' ? user.username.slice(0, 6) : '';
+    const userAlias = user.alias || defaultAlias || undefined;
+    const isChosen = Boolean(user.alias_chosen || (user.alias && defaultAlias && user.alias.toLowerCase() !== defaultAlias.toLowerCase()));
+    const appMeta = (session as any).user?.app_metadata || {};
+    const provider = appMeta.provider || (Array.isArray(appMeta.providers) && appMeta.providers[0]) || 'email';
+    return finish(NextResponse.json({ session: { user: { id: user.id, username: user.username, alias: userAlias, alias_chosen: isChosen, shop_id: null, role: 'customer', provider } } }));
   } catch {
     return finish(NextResponse.json({ detail: 'Sign-in service is temporarily unavailable. Please try again.' }, { status: 503 }));
   }

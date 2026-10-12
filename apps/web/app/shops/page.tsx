@@ -34,7 +34,7 @@ export default function FindAShopPage() {
     <div className="min-h-screen bg-[#f7f4ee] text-[#241814] flex flex-col">
       <CustomerWorkspaceHeader currentTab="shops" />
 
-      <main className="flex-1 max-w-[1640px] 2xl:max-w-[1760px] w-full mx-auto px-6 sm:px-10 lg:px-14 xl:px-20 py-10 sm:py-14 space-y-10 sm:space-y-12">
+      <main className="flex-1 w-full px-[clamp(24px,3.2vw,88px)] py-10 sm:py-14 space-y-10 sm:space-y-12">
         {/* Page Top Title Row */}
         <div>
           <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] xl:text-[3.75rem] font-serif text-[#241814] font-normal tracking-tight leading-tight">

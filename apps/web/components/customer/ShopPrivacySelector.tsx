@@ -10,38 +10,44 @@ interface ShopPrivacySelectorProps {
   accessMode: AccessMode;
   onModeChange: (mode: AccessMode) => void;
   session: any;
+  shopId?: string;
 }
 
 export default function ShopPrivacySelector({
   accessMode,
   onModeChange,
   session,
+  shopId,
 }: ShopPrivacySelectorProps) {
+  const returnPath = shopId ? `/shop/${encodeURIComponent(shopId)}` : '/shops';
+
   return (
-    <section className="glass-panel rounded-3xl border border-white/10 p-6 space-y-4">
-      <div className="flex items-center justify-between">
+    <section className="bg-white rounded-3xl border border-[#e6dfd5] p-6 sm:p-8 space-y-5 shadow-sm text-left">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-[#fbf9f5]">
-            Choose Document Privacy Mode
+          <h2 className="text-sm font-bold uppercase tracking-wider text-[#8c7b70]">
+            Privacy &amp; storage choice
           </h2>
-          <p className="text-xs text-neutral-300 mt-0.5">
-            Decide whether this document is temporary or saved to your personal desktop library.
+          <p className="text-base text-[#241814] font-medium mt-0.5">
+            Choose whether this document is temporary or saved to your library.
           </p>
         </div>
-        <Link
-          href="/account"
-          className="text-xs text-[#ea7c50] hover:text-[#f3a261] font-medium transition-colors hidden sm:inline"
-        >
-          My Workspace →
-        </Link>
+        {session && (
+          <Link
+            href="/account/documents"
+            className="text-xs sm:text-sm font-semibold text-[#c05634] hover:underline transition-colors inline-flex items-center gap-1"
+          >
+            My library →
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <label
-          className={`cursor-pointer rounded-2xl border p-4.5 transition-all ${
+          className={`cursor-pointer rounded-2xl border-2 p-5 transition-all text-left flex flex-col justify-between ${
             accessMode === 'anonymous'
-              ? 'border-[#ea7c50] bg-[#ea7c50]/15 ring-1 ring-[#ea7c50]/40'
-              : 'border-white/10 bg-[#231a14]/40 hover:bg-[#231a14]/70 hover:border-white/20'
+              ? 'border-[#c05634] bg-[#fdf3ea] shadow-xs'
+              : 'border-[#e6dfd5] bg-[#faf6f0] hover:border-[#c05634]/50'
           }`}
         >
           <input
@@ -51,20 +57,25 @@ export default function ShopPrivacySelector({
             onChange={() => onModeChange('anonymous')}
             className="sr-only"
           />
-          <div className="flex items-center gap-2 text-sm font-bold text-[#fbf9f5]">
-            <Shield className="w-4 h-4 text-[#ea7c50]" />
-            <span>Anonymous Walk-In Job</span>
+          <div>
+            <div className="flex items-center gap-2.5 text-base font-bold text-[#241814]">
+              <Shield className={`w-5 h-5 ${accessMode === 'anonymous' ? 'text-[#c05634]' : 'text-[#8c7b70]'}`} />
+              <span>Anonymous job</span>
+            </div>
+            <p className="text-sm text-[#66554b] mt-2 leading-relaxed">
+              Temporary files. No account needed. Files are removed after printing or expiry.
+            </p>
           </div>
-          <span className="block text-xs text-neutral-300 mt-2 leading-relaxed">
-            No account needed. A release PIN is issued after verified payment. Temporary documents are deleted after printing or expiry.
+          <span className="mt-3 text-xs font-semibold text-[#8c7b70] uppercase tracking-wider">
+            Never stored in library
           </span>
         </label>
 
         <label
-          className={`cursor-pointer rounded-2xl border p-4.5 transition-all ${
+          className={`cursor-pointer rounded-2xl border-2 p-5 transition-all text-left flex flex-col justify-between ${
             accessMode === 'account'
-              ? 'border-[#f3a261] bg-[#f3a261]/15 ring-1 ring-[#f3a261]/40'
-              : 'border-white/10 bg-[#231a14]/40 hover:bg-[#231a14]/70 hover:border-white/20'
+              ? 'border-[#c05634] bg-[#fdf3ea] shadow-xs'
+              : 'border-[#e6dfd5] bg-[#faf6f0] hover:border-[#c05634]/50'
           }`}
         >
           <input
@@ -74,26 +85,40 @@ export default function ShopPrivacySelector({
             onChange={() => onModeChange('account')}
             className="sr-only"
           />
-          <div className="flex items-center gap-2 text-sm font-bold text-[#fbf9f5]">
-            <FolderLock className="w-4 h-4 text-[#f3a261]" />
-            <span>Account-Linked Job</span>
+          <div>
+            <div className="flex items-center gap-2.5 text-base font-bold text-[#241814]">
+              <FolderLock className={`w-5 h-5 ${accessMode === 'account' ? 'text-[#c05634]' : 'text-[#8c7b70]'}`} />
+              <span>Account-linked job</span>
+            </div>
+            <p className="text-sm text-[#66554b] mt-2 leading-relaxed">
+              Save in your private library. Re-print anytime from your private customer shelf.
+            </p>
           </div>
-          <span className="block text-xs text-neutral-300 mt-2 leading-relaxed">
-            Save this document into your private workspace library for re-printing at any CBPMS station anytime.
+          <span className="mt-3 text-xs font-semibold text-[#c05634] uppercase tracking-wider">
+            {session ? 'Linked to your account' : 'Requires sign in'}
           </span>
         </label>
       </div>
 
       {accessMode === 'account' && !session && (
-        <div className="pt-2">
-          <CustomerAuthPanel compact />
+        <div className="p-4 rounded-2xl bg-[#faf6f0] border border-[#e6dfd5] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="text-xs sm:text-sm text-[#66554b]">
+            <p className="font-semibold text-[#241814]">Sign in to link this job to your library</p>
+            <p className="mt-0.5">Use your existing sign-in to keep this file in your personal shelf.</p>
+          </div>
+          <Link
+            href={`/login?returnTo=${encodeURIComponent(returnPath)}`}
+            className="inline-flex items-center justify-center px-5 py-2.5 min-h-[44px] rounded-xl bg-[#c05634] hover:bg-[#a94829] text-white text-sm font-semibold transition-all whitespace-nowrap shadow-xs"
+          >
+            Sign in now
+          </Link>
         </div>
       )}
 
       {accessMode === 'account' && session && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center justify-between">
-          <span>Signed in as <strong>{session.user.username}</strong>. Linked to your desktop workspace.</span>
-          <Link href="/account" className="underline hover:text-white">View Library</Link>
+        <div className="p-3.5 rounded-2xl bg-[#f0f9f3] border border-[#cbe8d5] text-xs sm:text-sm text-[#1e613b] flex items-center justify-between">
+          <span>Signed in as <strong>{session.user.alias || session.user.username}</strong>. Linked to your private library.</span>
+          <Link href="/account/documents" className="font-semibold underline hover:text-[#134227]">View library</Link>
         </div>
       )}
     </section>
