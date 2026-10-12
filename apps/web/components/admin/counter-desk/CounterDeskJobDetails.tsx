@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { CounterDeskContextType } from './types';
+import { request } from '@/lib/api';
 import { ArrowLeft, CheckCircle2, Clock, XCircle, AlertTriangle, Printer, ShieldAlert } from 'lucide-react';
 
 export default function CounterDeskJobDetails({ ctx }: { ctx: CounterDeskContextType }) {
@@ -32,21 +33,14 @@ export default function CounterDeskJobDetails({ ctx }: { ctx: CounterDeskContext
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/v1/shops/${shop.id}/jobs/${job.id}/reject`, {
+      await request(`/shops/${shop.id}/jobs/${job.id}/reject`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reason: rejectReason,
           note: rejectNote || undefined
         })
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'Failed to reject job');
-      }
+      }, token);
       setIsRejecting(false);
       await refreshData();
       setViewingJobDetail(false);

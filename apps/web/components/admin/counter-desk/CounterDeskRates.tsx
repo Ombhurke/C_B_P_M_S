@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { CounterDeskContextType } from './types';
 import { PaperRateConfig } from '@/lib/types';
+import { request } from '@/lib/api';
 import { Save, CheckCircle2, AlertCircle, Info, Layers, Tag } from 'lucide-react';
 
 export default function CounterDeskRates({ ctx }: { ctx: CounterDeskContextType }) {
@@ -58,12 +59,9 @@ export default function CounterDeskRates({ ctx }: { ctx: CounterDeskContextType 
     setSavedSuccess(false);
 
     try {
-      const res = await fetch(`/api/v1/shops/${shop.id}`, {
+      await request(`/shops/${shop.id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           supports_bw: supportsBw,
           supports_color: supportsColor,
@@ -74,12 +72,7 @@ export default function CounterDeskRates({ ctx }: { ctx: CounterDeskContextType 
           base_rate_color_in_inr: paperRates.normal?.color_single ?? 10,
           duplex_rate_in_inr: paperRates.normal?.bw_duplex ?? 3
         })
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'Failed to update rates');
-      }
+      }, token);
 
       setSavedSuccess(true);
       await refreshData();

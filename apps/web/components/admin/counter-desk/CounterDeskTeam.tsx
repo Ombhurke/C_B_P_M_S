@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { CounterDeskContextType } from './types';
+import { request } from '@/lib/api';
 import { Users, UserPlus, Shield, Store, CheckCircle2, AlertCircle, Save } from 'lucide-react';
 
 export default function CounterDeskTeam({ ctx }: { ctx: CounterDeskContextType }) {
@@ -32,12 +33,9 @@ export default function CounterDeskTeam({ ctx }: { ctx: CounterDeskContextType }
     setProfileSuccess(false);
 
     try {
-      const res = await fetch(`/api/v1/shops/${shop.id}/profile`, {
+      await request(`/shops/${shop.id}/profile`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
           email: email || undefined,
@@ -45,12 +43,7 @@ export default function CounterDeskTeam({ ctx }: { ctx: CounterDeskContextType }
           address: address || undefined,
           upi_id: upiId || undefined
         })
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'Failed to update shop profile');
-      }
+      }, token);
 
       setProfileSuccess(true);
       await refreshData();
@@ -69,23 +62,15 @@ export default function CounterDeskTeam({ ctx }: { ctx: CounterDeskContextType }
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/v1/shops/${shop.id}/team`, {
+      await request(`/shops/${shop.id}/team`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: inviteUsername,
           password: invitePassword,
           role: inviteRole
         })
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'Failed to add staff member');
-      }
+      }, token);
 
       setShowInviteModal(false);
       setInviteUsername('');

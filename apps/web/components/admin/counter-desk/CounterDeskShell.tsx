@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Shop, QueueItem, Summary, ActivityEvent } from '@/lib/types';
+import { request } from '@/lib/api';
 import { CounterDeskTab, Station, TeamMember, CounterDeskContextType } from './types';
 import CounterDeskOverview from './CounterDeskOverview';
 import CounterDeskQueue from './CounterDeskQueue';
@@ -60,30 +61,18 @@ export default function CounterDeskShell({
   const refreshData = useCallback(async () => {
     setRefreshing(true);
     try {
-      // 1. Fetch Shop & Queue
-      const [shopRes, queueRes, stationsRes, teamRes] = await Promise.all([
-        fetch(`/api/v1/shops/${shop.id}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
-        fetch(`/api/v1/shops/${shop.id}/queue`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
-        fetch(`/api/v1/shops/${shop.id}/stations`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
-        fetch(`/api/v1/shops/${shop.id}/team`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
+      // 1. Fetch Shop & Queue through authorized proxy
+      const [s, q, st, tm] = await Promise.all([
+        request<Shop>(`/shops/${shop.id}`, {}, token).catch(() => null),
+        request<QueueItem[]>(`/jobs/queue/${shop.id}`, {}, token).catch(() => null),
+        request<Station[]>(`/shops/${shop.id}/stations`, {}, token).catch(() => null),
+        request<TeamMember[]>(`/shops/${shop.id}/team`, {}, token).catch(() => null)
       ]);
 
-      if (shopRes && shopRes.ok) {
-        const s = await shopRes.json();
-        setShop(s);
-      }
-      if (queueRes && queueRes.ok) {
-        const q = await queueRes.json();
-        setQueue(q);
-      }
-      if (stationsRes && stationsRes.ok) {
-        const st = await stationsRes.json();
-        setStations(st);
-      }
-      if (teamRes && teamRes.ok) {
-        const tm = await teamRes.json();
-        setTeam(tm);
-      }
+      if (s) setShop(s);
+      if (q) setQueue(q);
+      if (st) setStations(st);
+      if (tm) setTeam(tm);
     } catch {
       // Keep existing on network flicker
     } finally {

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { CounterDeskContextType } from './types';
+import { request } from '@/lib/api';
 import { Printer as PrinterIcon, Plus, Laptop, Wifi, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function CounterDeskPrinters({ ctx }: { ctx: CounterDeskContextType }) {
@@ -27,23 +28,16 @@ export default function CounterDeskPrinters({ ctx }: { ctx: CounterDeskContextTy
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/v1/shops/${shop.id}/printers`, {
+      await request(`/shops/${shop.id}/printers`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           device_name: deviceName,
           max_paper_size: maxPaperSize,
           is_color_supported: isColor,
           is_duplex_supported: isDuplex
         })
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'Failed to create printer');
-      }
+      }, token);
       setShowAddPrinter(false);
       setDeviceName('');
       await refreshData();
@@ -60,21 +54,14 @@ export default function CounterDeskPrinters({ ctx }: { ctx: CounterDeskContextTy
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/v1/shops/${shop.id}/stations`, {
+      await request(`/shops/${shop.id}/stations`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: stationName,
           location: stationLocation
         })
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'Failed to pair station');
-      }
+      }, token);
       setShowAddStation(false);
       setStationName('');
       await refreshData();
