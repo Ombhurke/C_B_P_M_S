@@ -1,78 +1,137 @@
 from pathlib import Path
 from unittest.mock import Mock
+import pytest
 
-from main import DesktopAgentApp
 from agent.core.config import agent_settings
 from agent.core.api_client import api_client
+from agent.core.lifecycle import PrintLifecycleManager, JobLifecycleStage
 from agent.spooler.win32_spooler import spooler_bridge
 
 
-def make_app(tmp_path, monkeypatch):
+def make_lifecycle(tmp_path, monkeypatch):
     spool_dir = tmp_path / "spool"
-    spool_dir.mkdir()
+    spool_dir.mkdir(parents=True, exist_ok=True)
+    state_dir = tmp_path / "state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+
     monkeypatch.setattr(agent_settings, "LOCAL_SPOOL_DIR", str(spool_dir))
-    monkeypatch.setattr(agent_settings, "LOCAL_STATE_DIR", str(tmp_path / "state"))
-    app = DesktopAgentApp()
-    app.dashboard = Mock()
-    app.refresh_queue = Mock()
+    monkeypatch.setattr(agent_settings, "LOCAL_STATE_DIR", str(state_dir))
+
+    logs = []
+    manager = PrintLifecycleManager(on_log=lambda m: logs.append(m))
+
     monkeypatch.setattr(api_client, "verify_release_token", Mock(return_value={
-        "job_id": "job-test", "file_name": "document.pdf", "download_url": "/file", "file_hash": "hash"}))
-    def download(url, path, expected_hash):
-        Path(path).write_bytes(b"example")
-    monkeypatch.setattr(api_client, "download_staged_document", download)
-    notify = Mock(return_value={"shredded": False})
-    monkeypatch.setattr(api_client, "notify_spool_completed", notify)
-    return app, notify
+        "job_id": "job-test-101",
+        "file_name": "document.pdf",
+        "download_url": "/file",
+        "file_hash": "hash123",
+        "is_color": False,
+        "duplex_mode": "simplex",
+        "copy_count": 1,
+        "layout_nup": 1
+    }))
+
+    def fake_download(url, path, expected_hash):
+        Path(path).write_bytes(b"%PDF-1.4 Fake PDF Content")
+    monkeypatch.setattr(api_client, "download_staged_document", fake_download)
+
+    return manager, logs
 
 
-def test_print_failure_never_reports_completed(tmp_path, monkeypatch):
-    app, notify = make_app(tmp_path, monkeypatch)
-    monkeypatch.setattr(spooler_bridge, "spool_job", Mock(return_value=False))
-    app.handle_release_request("1234")
-    notify.assert_called_once_with("job-test", "failed", "Printer did not accept the job")
-    assert not list(Path(agent_settings.LOCAL_SPOOL_DIR).iterdir())
+def test_find_and_review_never_prints(tmp_path, monkeypatch):
+    manager, logs = make_lifecycle(tmp_path, monkeypatch)
+    spool_mock = Mock()
+    monkeypatch.setattr(spooler_bridge, "spool_job", spool_mock)
+
+    job = manager.find_and_review("4821")
+
+    assert job is not None
+    assert manager.stage == JobLifecycleStage.REVIEWING
+    # Invariant: Scanning/reviewing must NEVER trigger spool_job
+    spool_mock.assert_not_called()
+    assert manager.local_file_path is not None
+    assert Path(manager.local_file_path).exists()
 
 
-def test_download_failure_retains_cloud_job(tmp_path, monkeypatch):
-    app, notify = make_app(tmp_path, monkeypatch)
-    monkeypatch.setattr(api_client, "download_staged_document", Mock(side_effect=RuntimeError("network")))
-    printer = Mock()
-    monkeypatch.setattr(spooler_bridge, "spool_job", printer)
-    app.handle_release_request("1234")
-    printer.assert_not_called()
-    notify.assert_called_once_with("job-test", "failed", "network")
+def test_print_blocked_for_unsupported_settings(tmp_path, monkeypatch):
+    manager, logs = make_lifecycle(tmp_path, monkeypatch)
+    manager.find_and_review("4821")
+
+    # Set duplex which is unsupported in raw mode
+    manager.active_job["duplex_mode"] = "duplex_long"
+    spool_mock = Mock()
+    monkeypatch.setattr(spooler_bridge, "spool_job", spool_mock)
+
+    success = manager.submit_print("HP LaserJet Pro")
+    assert success is False
+    spool_mock.assert_not_called()
+    assert any("Duplex is not supported" in log for log in logs)
 
 
-def test_missing_printer_support_fails_closed(tmp_path, monkeypatch):
-    monkeypatch.setattr(agent_settings, "MOCK_PRINTING", False)
-    monkeypatch.setattr(spooler_bridge, "is_native_available", False)
-    path = tmp_path / "file.pdf"
-    path.write_bytes(b"test")
-    import pytest
-    with pytest.raises(RuntimeError, match="unavailable"):
-        spooler_bridge.spool_job("missing", str(path), {})
+def test_submit_print_transitions_to_spool_accepted(tmp_path, monkeypatch):
+    manager, logs = make_lifecycle(tmp_path, monkeypatch)
+    manager.find_and_review("4821")
 
-
-def test_ack_failure_does_not_claim_purge(tmp_path, monkeypatch):
-    app, notify = make_app(tmp_path, monkeypatch)
     monkeypatch.setattr(spooler_bridge, "spool_job", Mock(return_value=True))
-    notify.side_effect = RuntimeError("offline")
-    app.handle_release_request("1234")
-    assert any("uncertain" in str(call) for call in app.dashboard.log.call_args_list)
-    assert not list(Path(agent_settings.LOCAL_SPOOL_DIR).iterdir())
-    assert len(app.completion_outbox.pending()) == 1
+    success = manager.submit_print("HP LaserJet Pro")
+
+    assert success is True
+    assert manager.stage == JobLifecycleStage.AWAITING_CONFIRMATION
+    assert manager.active_spool_id is not None
 
 
-def test_uncertain_completion_is_retried_without_reprinting(tmp_path, monkeypatch):
-    app, notify = make_app(tmp_path, monkeypatch)
+def test_confirm_output_cleans_local_file_and_completes(tmp_path, monkeypatch):
+    manager, logs = make_lifecycle(tmp_path, monkeypatch)
+    manager.find_and_review("4821")
     monkeypatch.setattr(spooler_bridge, "spool_job", Mock(return_value=True))
-    notify.side_effect = RuntimeError("offline")
-    app.handle_release_request("1234")
-    pending = app.completion_outbox.pending()
-    assert len(pending) == 1 and pending[0]["status"] == "completed"
+    manager.submit_print("HP LaserJet Pro")
 
-    notify.side_effect = None
-    notify.return_value = {"shredded": True}
-    app.flush_completion_outbox()
-    notify.assert_called_with("job-test", "completed", None)
-    assert app.completion_outbox.pending() == []
+    confirm_mock = Mock(return_value={"status": "completed"})
+    monkeypatch.setattr(api_client, "confirm_output", confirm_mock)
+
+    res = manager.confirm_output("Verified by operator")
+    assert res is True
+    confirm_mock.assert_called_once_with("job-test-101", notes="Verified by operator")
+    # Sandboxed local file must be shredded
+    assert manager.local_file_path is None
+
+
+def test_failed_confirmation_enqueues_outbox_without_reprint(tmp_path, monkeypatch):
+    manager, logs = make_lifecycle(tmp_path, monkeypatch)
+    manager.find_and_review("4821")
+    monkeypatch.setattr(spooler_bridge, "spool_job", Mock(return_value=True))
+    manager.submit_print("HP LaserJet Pro")
+
+    # Network drops during confirmation
+    confirm_mock = Mock(side_effect=RuntimeError("Offline"))
+    monkeypatch.setattr(api_client, "confirm_output", confirm_mock)
+
+    res = manager.confirm_output("Verified by operator")
+    assert res is True
+    pending = manager.completion_outbox.pending()
+    assert len(pending) == 1
+    assert pending[0]["job_id"] == "job-test-101"
+
+    # Flush outbox when network returns
+    confirm_mock.side_effect = None
+    spool_mock = Mock()
+    monkeypatch.setattr(spooler_bridge, "spool_job", spool_mock)
+
+    flushed = manager.flush_outbox()
+    assert flushed == 1
+    assert manager.completion_outbox.pending() == []
+    # Invariant: Flushed outbox item reports result only, NEVER re-spools
+    spool_mock.assert_not_called()
+
+
+def test_abandon_claim_releases_server_claim(tmp_path, monkeypatch):
+    manager, logs = make_lifecycle(tmp_path, monkeypatch)
+    manager.find_and_review("4821")
+
+    abandon_mock = Mock(return_value={"ok": True})
+    monkeypatch.setattr(api_client, "abandon_job_claim", abandon_mock)
+
+    res = manager.abandon_claim()
+    assert res is True
+    abandon_mock.assert_called_once_with("job-test-101")
+    assert manager.stage == JobLifecycleStage.IDLE

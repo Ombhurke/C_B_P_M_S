@@ -152,9 +152,15 @@ def test_provider_amount_mismatch_cannot_release_job(client, monkeypatch):
 
 def test_live_provider_never_falls_back(client, monkeypatch):
     monkeypatch.setattr(settings, "PAYMENT_PROVIDER", "razorpay")
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_ID", "")
     with pytest.raises(HTTPException) as error:
         get_provider()
     assert error.value.status_code == 503
+
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_ID", "rzp_test_dummy")
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_SECRET", "dummy_secret")
+    provider = get_provider()
+    assert provider.name == "razorpay"
 
 
 def test_auth_scope_and_revocation(client):
@@ -525,5 +531,150 @@ def test_customer_calculate_cost_paper_matrix_and_nup(client):
     assert res_configured.json()["total_cost"] == 3.0
 
 
+def test_security_unpaid_job_cannot_be_confirmed_or_reported(client):
+    operator = auth(client)
+    job = stage(client)
+    # 1. Unpaid job cannot be confirmed
+    unpaid_confirm = client.post(f"/api/v1/jobs/{job['job_id']}/confirm-output",
+                                 headers=operator, json={"notes": "premature confirmation"})
+    assert unpaid_confirm.status_code == 402
+
+    # 2. Pay and queue job
+    receipt, _ = pay(client, job)
+    # 3. Now it can be confirmed
+    paid_confirm = client.post(f"/api/v1/jobs/{job['job_id']}/confirm-output",
+                               headers=operator, json={"notes": "verified print"})
+    assert paid_confirm.status_code == 200
+    assert paid_confirm.json()["status"] == "completed"
+
+    # 4. Completed job cannot be rejected
+    rejected = client.post(f"/api/v1/shops/shop-demo-1/jobs/{job['job_id']}/reject",
+                           headers=operator, json={"reason": "too late"})
+    assert rejected.status_code == 409
 
 
+def test_security_team_member_reserved_username(client):
+    admin = auth(client)
+    res = client.post("/api/v1/shops/shop-demo-1/team", headers=admin, json={
+        "username": "supabase:attacker",
+        "password": "Password12345!",
+        "role": "operator"
+    })
+    assert res.status_code == 422
+
+
+def test_security_customer_upload_filename_sanitization(client):
+    customer = customer_auth(client)
+    writer = PdfWriter(); writer.add_blank_page(width=595, height=842); content = io.BytesIO(); writer.write(content)
+    res = client.post("/api/v1/customer/documents", headers=customer,
+                      files={"file": ("../../traversal_doc.pdf", content.getvalue(), "application/pdf")})
+    assert res.status_code == 200
+    doc = res.json()
+    assert doc["file_name"] == "traversal_doc.pdf"
+    assert "/" not in doc["file_name"] and "\\" not in doc["file_name"]
+
+
+def test_pay_at_counter_flow(client):
+    headers = auth(client)
+    job = stage(client)
+    res = client.post(
+        f"/api/v1/payments/{job['job_id']}/pay-at-counter",
+        headers={"X-Checkout-Token": job["checkout_token"]},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["payment_status"] == "pending"
+    assert data["payment_method"] == "counter"
+    assert data["job_status"] == "queued"
+    assert len(data["release_token"]) == 4
+
+    # Operator can verify release token at counter
+    claim_res = client.post(
+        "/api/v1/jobs/verify-token",
+        headers=headers,
+        json={"shop_id": "shop-demo-1", "token": data["release_token"]},
+    )
+    assert claim_res.status_code == 200
+    assert claim_res.json()["payment_method"] == "counter"
+
+    # Operator completes job, automatically marking payment completed
+    comp_res = client.post(
+        f"/api/v1/jobs/{job['job_id']}/complete",
+        headers=headers,
+        json={"job_id": job["job_id"], "status": "completed"},
+    )
+    assert comp_res.status_code == 200
+
+    # Job is now completed and paid
+    with db.transaction() as records:
+        updated = records.get("jobs", job["job_id"])
+        assert updated["job_status"] == "completed"
+        assert updated["payment_status"] == "completed"
+
+
+def test_razorpay_verification_flow(client, monkeypatch):
+    import hmac, hashlib
+    monkeypatch.setattr(settings, "PAYMENT_PROVIDER", "razorpay")
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_ID", "rzp_test_testkey")
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_SECRET", "testsecret123")
+
+    order_id = "order_test123"
+    payment_id = "pay_test123456"
+
+    # Mock httpx.Client post and get for Razorpay server API
+    class MockRazorpayClient:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, json=None, auth=None):
+            class MockResp:
+                status_code = 200
+                def json(self):
+                    return {
+                        "id": order_id,
+                        "amount": json.get("amount", 800),
+                        "currency": "INR",
+                    }
+            return MockResp()
+        def get(self, url, auth=None):
+            class MockResp:
+                status_code = 200
+                def json(self):
+                    return {
+                        "id": payment_id,
+                        "order_id": order_id,
+                        "status": "captured",
+                        "amount": 800,
+                        "currency": "INR",
+                    }
+            return MockResp()
+
+    monkeypatch.setattr("httpx.Client", MockRazorpayClient)
+
+    job = stage(client)
+    order_res = client.post(
+        f"/api/v1/payments/{job['job_id']}/order",
+        headers={"X-Checkout-Token": job["checkout_token"]},
+    )
+    assert order_res.status_code == 200
+    order_data = order_res.json()
+    assert order_data["key_id"] == "rzp_test_testkey"
+    assert order_data["id"] == order_id
+
+    sig = hmac.new(b"testsecret123", f"{order_id}|{payment_id}".encode("utf-8"), hashlib.sha256).hexdigest()
+
+    verify_res = client.post(
+        f"/api/v1/payments/{job['job_id']}/verify",
+        headers={"X-Checkout-Token": job["checkout_token"]},
+        json={
+            "razorpay_order_id": order_id,
+            "razorpay_payment_id": payment_id,
+            "razorpay_signature": sig,
+        },
+    )
+    assert verify_res.status_code == 200
+    verify_data = verify_res.json()
+    assert verify_data["payment_status"] == "completed"
+    assert verify_data["payment_method"] == "razorpay"
+    assert verify_data["job_status"] == "queued"
+    assert len(verify_data["release_token"]) == 4
