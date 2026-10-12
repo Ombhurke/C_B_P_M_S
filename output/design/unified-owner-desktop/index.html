@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CBPMS unified owner desktop designs</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#fcfaf7;color:#251c17;font:18px/1.6 system-ui,sans-serif}header{padding:32px clamp(24px,3vw,72px);background:#f5f0e8;border-bottom:1px solid #e2dad0}main{padding:32px clamp(24px,3vw,72px)}h1,h2{font-family:Georgia,serif;line-height:1.2}h1{font-size:42px}h2{font-size:32px}p{max-width:95ch}a{color:#954329}nav{display:flex;gap:12px;flex-wrap:wrap;margin:24px 0}nav a{border:1px solid #d9cfc1;padding:10px 16px;min-height:48px;border-radius:8px;text-decoration:none}a:focus-visible{outline:3px solid #3b5232;outline-offset:4px}section{margin:48px 0}img{display:block;width:100%;height:auto;border:1px solid #e2dad0;border-radius:12px}.notice{background:#f5f0e8;border-left:4px solid #3b5232;padding:20px}footer{border-top:1px solid #e2dad0;padding:24px 0}</style></head>
+<body><header><h1>Counter Desk Desktop</h1><p>One owner workspace for shop management, informed job review and deliberate local printing.</p></header><main>
+<div class="notice">Nine design concepts, not application implementation. Records, rates, devices and online/payment states are illustrative. Written workflow and permission requirements override generated text. No automatic printing from scanning, opening a job or reconnecting.</div>
+<p><a href="../../../Docs/design/UNIFIED_OWNER_DESKTOP.md">Complete workflow and implementation specification</a> · <a href="../../../Docs/IDE_UNIFIED_OWNER_DESKTOP_PROMPT.md">Copy-paste IDE prompt</a> · <a href="PROMPTS.md">Generation prompts</a></p>
+<p>Owner workflow: connect an authorized station, open or scan a job, review its settings and eligibility, authorize file access, check the actual preview and printer support, explicitly print, verify the paper output, and reconcile the recorded result.</p>
+<nav aria-label="Screen concepts"><a href="#01-overview">Owner overview</a>
+<a href="#02-queue">Queue and release desk</a>
+<a href="#03-review">Print decision and authorized preview</a>
+<a href="#04-monitor">Active print monitor</a>
+<a href="#05-recovery">History and recovery</a>
+<a href="#06-printers">Printers and stations</a>
+<a href="#07-rates">Services and rates</a>
+<a href="#08-team">Staff and shop</a>
+<a href="#09-settings">Station setup and settings</a></nav>
+<section id="01-overview"><h2>Owner overview</h2><p>Owner management overview; no physical print action.</p><a href="01-overview.png"><img src="01-overview.png" alt="Desktop Counter Desk Owner overview concept" loading="lazy"></a></section>
+<section id="02-queue"><h2>Queue and release desk</h2><p>Select or scan a job to review it. Scanning never dispatches.</p><a href="02-queue.png"><img src="02-queue.png" alt="Desktop Counter Desk Queue and release desk concept" loading="lazy"></a></section>
+<section id="03-review"><h2>Print decision and authorized preview</h2><p>Authorized preview, requested settings and release/compatibility checks before deliberate Print.</p><a href="03-review.png"><img src="03-review.png" alt="Desktop Counter Desk Print decision and authorized preview concept" loading="lazy"></a></section>
+<section id="04-monitor"><h2>Active print monitor</h2><p>Spool acceptance and complete physical output are distinct; confirm or report an issue.</p><a href="04-monitor.png"><img src="04-monitor.png" alt="Desktop Counter Desk Active print monitor concept" loading="lazy"></a></section>
+<section id="05-recovery"><h2>History and recovery</h2><p>Retry reporting without reprinting; reconcile uncertain physical outcomes.</p><a href="05-recovery.png"><img src="05-recovery.png" alt="Desktop Counter Desk History and recovery concept" loading="lazy"></a></section>
+<section id="06-printers"><h2>Printers and stations</h2><p>Actual device observations and effective driver support, not assumed capabilities.</p><a href="06-printers.png"><img src="06-printers.png" alt="Desktop Counter Desk Printers and stations concept" loading="lazy"></a></section>
+<section id="07-rates"><h2>Services and rates</h2><p>Owner-only persisted services and rates; accepted job quotes do not change.</p><a href="07-rates.png"><img src="07-rates.png" alt="Desktop Counter Desk Services and rates concept" loading="lazy"></a></section>
+<section id="08-team"><h2>Staff and shop</h2><p>Server-checked memberships and shop profile; no cross-shop/library access.</p><a href="08-team.png"><img src="08-team.png" alt="Desktop Counter Desk Staff and shop concept" loading="lazy"></a></section>
+<section id="09-settings"><h2>Station setup and settings</h2><p>Guided station setup, lock, local preferences and redacted diagnostics.</p><a href="09-settings.png"><img src="09-settings.png" alt="Desktop Counter Desk Station setup and settings concept" loading="lazy"></a></section>
+<footer><p><a href="../operator-station/index.html">Earlier owner portal and station references</a>. This new set unifies desktop workflow while preserving the owner portal direction. Use the reviewed specification, not the older sparse station flow.</p></footer></main></body></html>

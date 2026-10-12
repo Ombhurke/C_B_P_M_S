@@ -1,5 +1,7 @@
 # Operator portal and desktop Print Station
 
+Desktop design update, 12 October 2026: [UNIFIED_OWNER_DESKTOP.md](UNIFIED_OWNER_DESKTOP.md) and [the unified gallery](../../output/design/unified-owner-desktop/index.html) supersede the separate sparse station navigation for the next desktop implementation. The owner web portal references below remain the visual foundation. This is a design handoff, not a claim the unified app is implemented.
+
 Design proposals dated 10 October 2026. These extend the customer Option B / Paper desk theme. Shop implementation remains deferred under IMPLEMENTATION_HANDOFF.md; this request authorizes design artifacts only. No application code, records, credentials, prices or shop configuration were changed.
 
 Open [the complete image gallery](../../output/design/operator-station/index.html) to view the two sets. Every screen has an individual PNG; the gallery displays one full-width image at a time, not small mobile-sized tiles. Open an image directly for original resolution.
