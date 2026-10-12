@@ -34,23 +34,26 @@ async def upload_document(
     require_customer(user)
     if not file.filename:
         raise HTTPException(400, "Filename is required")
+    safe_filename = Path(file.filename).name.strip()
+    if not safe_filename or any(c in safe_filename for c in ("\r", "\n", "\0")):
+        raise HTTPException(422, "Invalid filename")
     content = await file.read()
     if len(content) > settings.MAX_FILE_SIZE_BYTES:
         raise HTTPException(413, f"File exceeds maximum allowed size ({settings.MAX_FILE_SIZE_BYTES // (1024 * 1024)} MB)")
     if len(content) == 0:
         raise HTTPException(422, "File is empty")
 
-    page_count, mime = inspect_document(file.filename, content)
+    page_count, mime = inspect_document(safe_filename, content)
     doc_id = f"doc-{uuid.uuid4().hex[:12]}"
     now_iso = datetime.now(timezone.utc).isoformat()
-    saved = storage_service.save(doc_id, file.filename, content, mime)
+    saved = storage_service.save(doc_id, safe_filename, content, mime)
 
     doc = {
         "id": doc_id,
         "owner_id": user["id"],
         "library": True,
         "job_id": None,
-        "file_name": file.filename,
+        "file_name": safe_filename,
         "mime_type": mime,
         "file_size_bytes": len(content),
         "file_hash": hashlib.sha256(content).hexdigest(),
@@ -84,6 +87,88 @@ async def upload_document(
         raise
 
     return doc
+
+
+@router.post("/documents/batch", response_model=list[CustomerDocumentResponse])
+async def upload_documents_batch(
+    files: list[UploadFile] = File(...),
+    user=Depends(current_user),
+):
+    require_customer(user)
+    if not files:
+        raise HTTPException(400, "At least one file is required")
+
+    total_bytes = 0
+    file_payloads = []
+    for f in files:
+        if not f.filename:
+            continue
+        safe_name = Path(f.filename).name.strip()
+        if not safe_name or any(c in safe_name for c in ("\r", "\n", "\0")):
+            continue
+        suffix = Path(safe_name).suffix.lower()
+        if suffix not in (".pdf", ".png", ".jpg", ".jpeg"):
+            continue
+        content = await f.read()
+        if len(content) == 0:
+            continue
+        total_bytes += len(content)
+        if total_bytes > settings.MAX_FOLDER_SIZE_BYTES:
+            raise HTTPException(413, f"Combined folder upload exceeds {settings.MAX_FOLDER_SIZE_BYTES // (1024 * 1024)} MB limit")
+        file_payloads.append((safe_name, content))
+
+    if not file_payloads:
+        raise HTTPException(422, "No valid PDF, PNG, or JPG files found in the folder upload")
+
+    created_docs = []
+    saved_storage_entries = []
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    try:
+        for safe_filename, content in file_payloads:
+            page_count, mime = inspect_document(safe_filename, content)
+            doc_id = f"doc-{uuid.uuid4().hex[:12]}"
+            saved = storage_service.save(doc_id, safe_filename, content, mime)
+            saved_storage_entries.append(saved)
+
+            doc = {
+                "id": doc_id,
+                "owner_id": user["id"],
+                "library": True,
+                "job_id": None,
+                "file_name": safe_filename,
+                "mime_type": mime,
+                "file_size_bytes": len(content),
+                "file_hash": hashlib.sha256(content).hexdigest(),
+                "page_count": page_count,
+                "file_path": saved.get("file_path"),
+                "supabase_path": saved.get("supabase_path"),
+                "created_at": now_iso,
+                "updated_at": now_iso,
+                "status": "available",
+                "deleted_at": None,
+            }
+            created_docs.append(doc)
+
+        with db.transaction() as records:
+            for doc in created_docs:
+                records.put("documents", doc["id"], doc)
+            record_audit(
+                records,
+                "document.upload_batch",
+                actor=user["username"],
+                target=f"{len(created_docs)} files",
+                metadata={"total_size": total_bytes, "count": len(created_docs)},
+            )
+    except Exception:
+        for saved in saved_storage_entries:
+            try:
+                storage_service.purge(saved)
+            except Exception:
+                pass
+        raise
+
+    return created_docs
 
 
 @router.get("/documents", response_model=list[CustomerDocumentResponse])
@@ -146,7 +231,7 @@ def get_document(document_id: str, user=Depends(current_user)):
     require_customer(user)
     with db.transaction(readonly=True) as records:
         document = records.get("documents", document_id)
-        if not document or document.get("owner_id") != user["id"] or not document.get("library") or document.get("status") == "deleted":
+        if not document or document.get("owner_id") != user["id"] or not document.get("library") or document.get("status") in ("deleted", "deleting"):
             raise HTTPException(404, "Document not found")
         job = records.get("jobs", document.get("job_id")) if document.get("job_id") else None
 
@@ -161,10 +246,18 @@ def download_document(document_id: str, user=Depends(current_user)):
     require_customer(user)
     with db.transaction(readonly=True) as records:
         document = records.get("documents", document_id)
-    if not document or document.get("owner_id") != user["id"] or not document.get("library"):
+    if not document or document.get("owner_id") != user["id"] or not document.get("library") or document.get("status") in ("deleted", "deleting"):
         raise HTTPException(404, "Document not found")
-    if document.get("file_path") and Path(document["file_path"]).is_file():
-        return FileResponse(document["file_path"], filename=document["file_name"], media_type=document["mime_type"])
+    raw_path = document.get("file_path")
+    if raw_path:
+        file_path = Path(raw_path).resolve()
+        temp_dir = Path(settings.TEMP_STORAGE_DIR).resolve()
+        try:
+            file_path.relative_to(temp_dir)
+        except ValueError:
+            raise HTTPException(403, "File path not permitted")
+        if file_path.is_file():
+            return FileResponse(str(file_path), filename=Path(document["file_name"]).name, media_type=document["mime_type"])
     signed_url = storage_service.signed_url(document)
     if signed_url:
         return RedirectResponse(signed_url)

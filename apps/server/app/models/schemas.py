@@ -234,6 +234,7 @@ class CustomerJobResponse(BaseModel):
     total_cost: float
     currency: str
     payment_status: PaymentStatus
+    payment_method: Optional[str] = None
     job_status: JobStatus
     created_at: str
     expires_at: str
@@ -253,6 +254,7 @@ class PaymentVerifyResponse(BaseModel):
     barcode_payload: str
     total_cost: float
     payment_status: PaymentStatus
+    payment_method: Optional[str] = None
     job_status: JobStatus
     expires_at: datetime
 
@@ -276,6 +278,8 @@ class TokenVerifyResponse(BaseModel):
     total_cost: float
     download_url: str
     download_url_expires_in_seconds: int = 60
+    payment_status: Optional[PaymentStatus] = None
+    payment_method: Optional[str] = None
 
 
 class JobCompleteRequest(BaseModel):

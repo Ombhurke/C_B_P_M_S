@@ -185,6 +185,8 @@ def list_shop_team(shop_id: str, user=Depends(current_user)):
 def invite_shop_team_member(shop_id: str, payload: TeamInviteRequest, user=Depends(current_user)):
     require_shop(user, shop_id, admin=True)
     username = payload.username.strip().lower()
+    if username.startswith("supabase:"):
+        raise HTTPException(422, "Reserved username")
     with db.transaction() as records:
         if records.get("users", username):
             raise HTTPException(409, "User already exists")
@@ -219,6 +221,8 @@ async def reject_job(shop_id: str, job_id: str, payload: JobRejectRequest, user=
         job = records.get("jobs", job_id)
         if not job or job.get("shop_id") != shop_id:
             raise HTTPException(404, "Job not found in this shop")
+        if job.get("job_status") in ("completed", "expired"):
+            raise HTTPException(409, f"Cannot reject a job in status '{job.get('job_status')}'")
         job["job_status"] = "failed"
         job["rejection_reason"] = payload.reason
         job["rejected_by"] = user["username"]

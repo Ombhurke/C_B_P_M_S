@@ -29,7 +29,7 @@ async def verify_release_token(payload: TokenVerifyRequest, user=Depends(current
     check_attempts(key)
     with db.transaction() as records:
         job = next((j for j in records.list("jobs") if j["shop_id"] == payload.shop_id and
-                    j["release_token"] == payload.token and j["payment_status"] == "completed" and
+                    j["release_token"] == payload.token and (j["payment_status"] == "completed" or j.get("payment_method") == "counter") and
                     j["job_status"] in ("queued", "failed") and j["expires_at_epoch"] > time.time()), None)
         if job:
             grant = secrets.token_urlsafe(32)
@@ -56,9 +56,18 @@ def download_print_file(job_id: str, grant: str):
     if (job["job_status"] != "processing" or job.get("download_until", 0) <= time.time() or
         not secrets.compare_digest(job.get("download_hash", ""), digest(grant))):
         raise HTTPException(403, "Download grant invalid or expired")
-    if not job.get("file_path") or not Path(job["file_path"]).is_file():
+    raw_path = job.get("file_path")
+    if not raw_path:
         raise HTTPException(404, "File not available")
-    return FileResponse(job["file_path"], filename=job["file_name"], media_type="application/octet-stream")
+    file_path = Path(raw_path).resolve()
+    temp_dir = Path(settings.TEMP_STORAGE_DIR).resolve()
+    try:
+        file_path.relative_to(temp_dir)
+    except ValueError:
+        raise HTTPException(403, "File path not permitted")
+    if not file_path.is_file():
+        raise HTTPException(404, "File not available")
+    return FileResponse(str(file_path), filename=Path(job["file_name"]).name, media_type="application/octet-stream")
 
 
 @router.post("/{job_id}/complete")
@@ -77,6 +86,8 @@ async def complete_print_job(job_id: str, payload: JobCompleteRequest, user=Depe
             job["download_until"] = 0
             if payload.status == "completed":
                 job["completed_at"] = iso(time.time())
+                if job.get("payment_method") == "counter":
+                    job["payment_status"] = "completed"
                 # Account-linked documents are library records and remain private after printing.
                 job["cleanup_pending"] = job.get("access_mode", "anonymous") == "anonymous"
         # Failure retains cloud bytes until retry or expiry.
@@ -92,7 +103,7 @@ async def complete_print_job(job_id: str, payload: JobCompleteRequest, user=Depe
         records.put("jobs", job_id, job)
         record_audit(records, "job.complete", actor=user["username"], target=job_id,
                      metadata={"shop_id": job["shop_id"], "status": job["job_status"],
-                               "error_message": payload.error_message})
+                                "error_message": payload.error_message})
     await ws_hub.broadcast_to_shop(job["shop_id"], "QUEUE_CHANGED", {"job_id": job_id})
     return {"status": job["job_status"], "job_id": job_id,
             "shredded": job["job_status"] == "completed" and
@@ -105,6 +116,15 @@ async def confirm_job_output(job_id: str, payload: JobOutputConfirmRequest, user
     with db.transaction() as records:
         job = get_job(records, job_id)
         require_shop(user, job["shop_id"])
+        if job.get("payment_status") != "completed":
+            if job.get("payment_method") == "counter":
+                job["payment_status"] = "completed"
+            else:
+                raise HTTPException(402, "Payment has not been completed for this job")
+        if job.get("job_status") == "completed" and job.get("output_confirmed"):
+            return {"status": "completed", "job_id": job_id, "output_confirmed": True}
+        if job.get("job_status") not in ("queued", "processing", "failed"):
+            raise HTTPException(409, f"Job cannot be confirmed from status '{job.get('job_status')}'")
         job["job_status"] = "completed"
         job["output_confirmed"] = True
         job["completed_at"] = iso(time.time())
@@ -120,11 +140,33 @@ async def confirm_job_output(job_id: str, payload: JobOutputConfirmRequest, user
     return {"status": "completed", "job_id": job_id, "output_confirmed": True}
 
 
+@router.post("/{job_id}/abandon-claim")
+async def abandon_job_claim(job_id: str, user=Depends(current_user)):
+    with db.transaction() as records:
+        job = get_job(records, job_id)
+        require_shop(user, job["shop_id"])
+        if job.get("job_status") != "processing":
+            raise HTTPException(409, f"Job is not processing (current status: {job.get('job_status')})")
+        if job.get("claimed_by") and job.get("claimed_by") != user["username"]:
+            raise HTTPException(403, "Claim belongs to another operator")
+        job["job_status"] = "queued"
+        job["claimed_by"] = None
+        job["download_until"] = 0
+        job["download_hash"] = None
+        records.put("jobs", job_id, job)
+        record_audit(records, "job.abandon_claim", actor=user["username"], target=job_id,
+                     metadata={"shop_id": job["shop_id"]})
+    await ws_hub.broadcast_to_shop(job["shop_id"], "QUEUE_CHANGED", {"job_id": job_id})
+    return {"ok": True, "job_id": job_id, "job_status": "queued"}
+
+
 @router.post("/{job_id}/report-issue")
 async def report_job_issue(job_id: str, payload: JobIssueReportRequest, user=Depends(current_user)):
     with db.transaction() as records:
         job = get_job(records, job_id)
         require_shop(user, job["shop_id"])
+        if job.get("job_status") in ("completed", "expired"):
+            raise HTTPException(409, f"Cannot report issues on {job.get('job_status')} jobs")
         job["job_status"] = "failed"
         job["last_error"] = f"{payload.issue_type}: {payload.details}"
         records.put("jobs", job_id, job)

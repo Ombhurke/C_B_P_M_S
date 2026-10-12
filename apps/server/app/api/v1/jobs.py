@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from typing import Literal
+from typing import Literal, Optional
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
 from app.core.auth import current_user, digest, optional_user, require_shop
 from app.core.audit import record_audit
@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.core.database import db
 from app.models.schemas import CostCalculationResponse, DuplexMode, JobStagedResponse
 from app.api.v1.shops import shop_record
-from app.services.documents import inspect_document
+from app.services.documents import inspect_document, merge_documents_into_pdf
 from app.services.pricing import calculate_cost
 from app.services.storage_service import storage_service
 
@@ -53,7 +53,7 @@ async def stage_print_job(shop_id: str = Form(...), page_count: int = Form(...),
     if access_mode == "account" and (not user or user["role"] != "customer"):
         raise HTTPException(401, "Sign in with a customer account for account-linked storage")
     shop = shop_record(shop_id)
-    if page_range != "all":
+    if page_range and page_range != "all":
         raise HTTPException(422, "Page ranges are not supported yet")
     # Validate before storage; the browser's page estimate is never used for billing.
     calculate_cost(shop, page_count, copy_count, is_color, duplex_mode, layout_nup, paper_type)
@@ -101,14 +101,109 @@ async def stage_print_job(shop_id: str = Form(...), page_count: int = Form(...),
     return {**job, "job_id": job_id, "checkout_token": checkout_token, "document_id": document_id}
 
 
+@router.post("/stage-folder", response_model=JobStagedResponse)
+async def stage_folder_print_job(
+    shop_id: str = Form(...),
+    folder_name: Optional[str] = Form("Folder_Bundle"),
+    copy_count: int = Form(1),
+    is_color: bool = Form(False),
+    duplex_mode: DuplexMode = Form(DuplexMode.SIMPLEX),
+    layout_nup: int = Form(1),
+    paper_type: str = Form("normal"),
+    access_mode: Literal["anonymous", "account"] = Form("anonymous"),
+    files: list[UploadFile] = File(...),
+    user=Depends(optional_user),
+):
+    if access_mode == "account" and (not user or user["role"] != "customer"):
+        raise HTTPException(401, "Sign in with a customer account for account-linked storage")
+    shop = shop_record(shop_id)
+    if not files:
+        raise HTTPException(400, "At least one file in folder is required")
+
+    total_bytes = 0
+    file_payloads = []
+    for f in files:
+        if not f.filename:
+            continue
+        safe_name = Path(f.filename).name.strip()
+        if not safe_name or any(c in safe_name for c in ("\r", "\n", "\0")):
+            continue
+        suffix = Path(safe_name).suffix.lower()
+        if suffix not in (".pdf", ".png", ".jpg", ".jpeg"):
+            continue
+        content = await f.read()
+        await f.close()
+        if len(content) == 0:
+            continue
+        total_bytes += len(content)
+        if total_bytes > settings.MAX_FOLDER_SIZE_BYTES:
+            raise HTTPException(413, f"Combined folder upload exceeds {settings.MAX_FOLDER_SIZE_BYTES // (1024 * 1024)} MB limit")
+        file_payloads.append((safe_name, content))
+
+    if not file_payloads:
+        raise HTTPException(422, "No valid PDF, PNG, or JPG files found in folder")
+
+    # Merge all documents into a single PDF
+    merged_bytes, page_count = merge_documents_into_pdf(file_payloads)
+    clean_folder_name = Path(folder_name or "Folder_Bundle").stem.strip() or "Folder_Bundle"
+    clean_filename = f"{clean_folder_name}.pdf"
+
+    calc = calculate_cost(shop, page_count, copy_count, is_color, duplex_mode, layout_nup, paper_type)
+    job_id = "job-" + uuid.uuid4().hex
+    checkout_token = secrets.token_urlsafe(32)
+    created = time.time()
+    document_id = "doc-" + uuid.uuid4().hex
+    owner_id = user["id"] if access_mode == "account" else None
+    mime = "application/pdf"
+
+    job = {
+        "id": job_id, "shop_id": shop_id, "file_name": clean_filename,
+        **calc, "payment_status": "pending", "job_status": "staged",
+        "release_token": None, "order": None, "checkout_hash": digest(checkout_token),
+        "created_at": iso(created), "expires_at": iso(created + settings.JOB_TTL_SECONDS),
+        "expires_at_epoch": created + settings.JOB_TTL_SECONDS, "cleanup_pending": False,
+        "access_mode": access_mode, "owner_id": owner_id, "document_id": document_id,
+    }
+    job.update(storage_service.save(job_id, clean_filename, merged_bytes, mime))
+    try:
+        document = {
+            "id": document_id, "job_id": job_id, "owner_id": owner_id,
+            "access_mode": access_mode, "library": access_mode == "account",
+            "file_name": clean_filename, "mime_type": mime,
+            "file_size_bytes": job["file_size_bytes"], "file_hash": job["file_hash"],
+            "file_path": job.get("file_path"), "supabase_path": job.get("supabase_path"),
+            "created_at": job["created_at"], "updated_at": job["created_at"],
+            "status": "available", "deleted_at": None,
+        }
+        with db.transaction() as records:
+            records.put("jobs", job_id, job)
+            records.put("documents", document_id, document)
+            record_audit(
+                records, "job.stage_folder", actor=owner_id, target=job_id,
+                metadata={"shop_id": shop_id, "access_mode": access_mode, "file_count": len(file_payloads), "pages": page_count},
+            )
+    except Exception:
+        purged = storage_service.purge(job)
+        if not purged:
+            try:
+                with db.transaction() as records:
+                    records.put("jobs", job_id, {**job, "cleanup_pending": True, "job_status": "failed"})
+            except Exception:
+                pass
+        raise
+    return {**job, "job_id": job_id, "checkout_token": checkout_token, "document_id": document_id}
+
+
 def customer_job_view(job):
+    can_show_token = bool(job.get("payment_status") == "completed" or job.get("payment_method") == "counter")
     return {"job_id": job["id"], "document_id": job.get("document_id"), "shop_id": job["shop_id"],
             "file_name": job["file_name"], "access_mode": job.get("access_mode", "anonymous"),
             "page_count": job["page_count"], "copy_count": job["copy_count"],
             "total_cost": job["total_cost"], "currency": job["currency"],
-            "payment_status": job["payment_status"], "job_status": job["job_status"],
+            "payment_status": job["payment_status"], "payment_method": job.get("payment_method"),
+            "job_status": job["job_status"],
             "created_at": job["created_at"], "expires_at": job["expires_at"],
-            "release_token": job.get("release_token") if job.get("payment_status") == "completed" else None}
+            "release_token": job.get("release_token") if can_show_token else None}
 
 
 @router.get("/{job_id}/status")
@@ -130,8 +225,10 @@ def get_shop_queue(shop_id: str, user=Depends(current_user)):
                 j["job_status"] in ("queued", "processing", "failed") and
                 (j["expires_at_epoch"] > time.time() or j["job_status"] == "processing")]
     fields = ("id", "shop_id", "file_name", "page_count", "copy_count", "is_color",
-              "duplex_mode", "layout_nup", "total_cost", "job_status", "created_at", "expires_at")
-    return [{k: j[k] for k in fields} for j in sorted(jobs, key=lambda j: j["created_at"])]
+              "duplex_mode", "layout_nup", "total_cost", "job_status", "created_at", "expires_at",
+              "payment_status", "payment_method", "paper_type", "access_mode", "currency",
+              "file_size_bytes", "file_hash", "rejection_reason")
+    return [{k: j.get(k) for k in fields} for j in sorted(jobs, key=lambda j: j["created_at"])]
 
 
 @router.get("/summary/{shop_id}")

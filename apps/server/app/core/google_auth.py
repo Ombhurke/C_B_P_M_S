@@ -52,14 +52,25 @@ def resolve_google_user(token: str) -> dict:
     key = "supabase:" + user_id
     with db.transaction() as records:
         existing = records.get("users", key)
+        # If not found under direct ID, check for existing customer profile with the same verified email
+        if not existing:
+            existing = next((u for u in records.list("users")
+                             if u.get("role") == "customer" and u.get("username") == email), None)
+
         if existing and not existing.get("active", True):
             raise HTTPException(403, "Account disabled")
-        # Do not link legacy accounts by email, or trust user_metadata for roles.
+
         existing_alias = existing.get("alias") if existing else None
         meta_alias = identity.get("user_metadata", {}).get("alias") if isinstance(identity.get("user_metadata"), dict) else None
         default_alias = email[:6] if len(email) >= 6 else email
         alias = existing_alias or meta_alias or default_alias
-        alias_chosen = bool(existing.get("alias_chosen") if existing and "alias_chosen" in existing else (meta_alias is not None))
+
+        # An alias is chosen if explicitly marked or if already customized from default initial letters
+        alias_chosen = bool(
+            (existing and existing.get("alias_chosen") is True)
+            or (meta_alias is not None and bool(identity.get("user_metadata", {}).get("alias_chosen", True)))
+            or (alias and alias.lower() != default_alias.lower())
+        )
 
         user = {"id": user_id, "username": email, "alias": alias, "alias_chosen": alias_chosen,
                 "role": "customer", "shop_id": None, "active": True,

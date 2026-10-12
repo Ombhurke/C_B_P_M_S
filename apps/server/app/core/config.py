@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "production"
     PAYMENT_PROVIDER: str = "disabled"
     ALLOW_MOCK_PAYMENTS: bool = False
+    RAZORPAY_KEY_ID: str = ""
+    RAZORPAY_KEY_SECRET: str = ""
+    RAZORPAY_WEBHOOK_SECRET: str = ""
     ALLOW_LOCAL_STORAGE: bool = False
     AUTH_SESSION_SECONDS: int = 8 * 60 * 60
     BOOTSTRAP_ADMIN_USERNAME: str = ""
@@ -39,6 +42,7 @@ class Settings(BaseSettings):
     
     # Ephemeral Storage Config
     MAX_FILE_SIZE_BYTES: int = 25 * 1024 * 1024  # 25MB ceiling
+    MAX_FOLDER_SIZE_BYTES: int = 200 * 1024 * 1024  # 200MB ceiling for combined folder uploads
     JOB_TTL_SECONDS: int = 2 * 60 * 60  # 2 hours
     TOKEN_PRESIGNED_URL_TTL_SECONDS: int = 60  # 60 seconds
     
