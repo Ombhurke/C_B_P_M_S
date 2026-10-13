@@ -27,6 +27,7 @@ import UploadBox from '@/components/customer/UploadBox';
 import PrintConfigSelector from '@/components/customer/PrintConfigSelector';
 import ShopPrivacySelector from '@/components/customer/ShopPrivacySelector';
 import ReleaseTokenCard from '@/components/customer/ReleaseTokenCard';
+import TurnstileWidget from '@/components/customer/TurnstileWidget';
 import {
   ArrowLeft,
   FileText,
@@ -87,6 +88,7 @@ function ShopCustomerContent() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'razorpay' | 'counter'>('razorpay');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const [config, setConfig] = useState<PrintConfig>({
     file: null,
@@ -239,7 +241,7 @@ function ShopCustomerContent() {
     setPaymentError(null);
 
     try {
-      const staged = await stagePrintJob(shop.id, config, accessMode, undefined, costCalc?.total_cost);
+      const staged = await stagePrintJob(shop.id, config, accessMode, undefined, costCalc?.total_cost, captchaToken || undefined);
       const order = await createPaymentOrder(staged);
 
       if (order.provider !== 'razorpay' || !order.key_id) {
@@ -308,7 +310,7 @@ function ShopCustomerContent() {
     setPaymentError(null);
 
     try {
-      const staged = await stagePrintJob(shop.id, config, accessMode, undefined, costCalc?.total_cost);
+      const staged = await stagePrintJob(shop.id, config, accessMode, undefined, costCalc?.total_cost, captchaToken || undefined);
       const receipt = await payAtCounter(staged);
       setCompletedReceipt(receipt);
     } catch (err) {
@@ -950,12 +952,21 @@ function ShopCustomerContent() {
                   </div>
                 )}
 
+                {/* Anti-Bot Verification for Anonymous Guests */}
+                {accessMode === 'anonymous' && (
+                  <TurnstileWidget
+                    onVerify={(token) => setCaptchaToken(token)}
+                    onError={() => setPaymentError('Security check failed. Please refresh and try again.')}
+                    className="mb-2"
+                  />
+                )}
+
                 {/* Primary Action Button */}
                 <div className="space-y-3 pt-2">
                   {selectedPaymentMethod === 'razorpay' ? (
                     <button
                       type="button"
-                      disabled={isProcessingPayment || !costCalc}
+                      disabled={isProcessingPayment || !costCalc || (accessMode === 'anonymous' && !captchaToken && Boolean(process.env.NEXT_PUBLIC_CAPTCHA_SITE_KEY))}
                       onClick={handleOnlinePayment}
                       className="w-full py-4 min-h-[52px] rounded-2xl bg-[#c05634] hover:bg-[#a94829] text-white text-base font-semibold shadow-md shadow-[#c05634]/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >
@@ -976,7 +987,7 @@ function ShopCustomerContent() {
                   ) : (
                     <button
                       type="button"
-                      disabled={isProcessingPayment || !costCalc}
+                      disabled={isProcessingPayment || !costCalc || (accessMode === 'anonymous' && !captchaToken && Boolean(process.env.NEXT_PUBLIC_CAPTCHA_SITE_KEY))}
                       onClick={handlePayAtCounter}
                       className="w-full py-4 min-h-[52px] rounded-2xl bg-[#241814] hover:bg-[#3d2f28] text-white text-base font-semibold shadow-md shadow-black/10 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >

@@ -68,12 +68,27 @@ export function calculateCost(shop: Shop, config: PrintConfig): Promise<CostCalc
 
 import { executeDirectUpload } from './upload-coordinator';
 
+export interface GuestSessionResponse {
+  guest_token: string;
+  session_id: string;
+  shop_id: string;
+  expires_at: string;
+}
+
+export async function createGuestSession(shopId: string, captchaToken?: string): Promise<GuestSessionResponse> {
+  return request<GuestSessionResponse>('/uploads/guest-session', {
+    method: 'POST',
+    body: JSON.stringify({ shop_id: shopId, captcha_token: captchaToken || 'mock-dev-token' }),
+  });
+}
+
 export async function stagePrintJob(
   shopId: string,
   config: PrintConfig,
   accessMode: AccessMode = 'anonymous',
   token?: string,
   clientQuotedCost?: number,
+  captchaToken?: string,
 ): Promise<StagedJobResponse> {
   const filesToUpload = config.isFolder && config.folderFiles && config.folderFiles.length > 0
     ? config.folderFiles
@@ -83,11 +98,18 @@ export async function stagePrintJob(
     throw new Error('Select a document first');
   }
 
+  let guestToken: string | undefined = undefined;
+  if (accessMode === 'anonymous' && !token) {
+    const sessionRes = await createGuestSession(shopId, captchaToken);
+    guestToken = sessionRes.guest_token;
+  }
+
   const result = await executeDirectUpload({
     files: filesToUpload,
     purpose: 'transient_print_job',
     accessMode: accessMode === 'account' ? 'persistent' : 'ephemeral',
     shopId,
+    guestToken,
     printConfig: {
       color: config.isColor,
       copies: config.copyCount,
