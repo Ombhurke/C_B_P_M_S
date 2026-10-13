@@ -168,18 +168,22 @@ python apps/desktop/build_exe.py
 - `python apps/desktop/build_exe.py --debug` : Keeps console window open for diagnostic inspection.
 - `python apps/desktop/build_exe.py --onedir` : Generates a folder bundle (faster startup).
 
-### Step 2: Configure Workstation `.env`
-On the print shop counter computer, place a `.env` file right next to `CBPMS_CounterDesk.exe`:
+### Step 2: Zero-.env Operator Sign-In Experience
+Print shop operators **do not need to create or configure any `.env` file**.
 
-```ini
-# Production Shop Configuration
-SHOP_ID=your-registered-shop-id
-CLOUD_API_URL=https://your-backend.onrender.com/api/v1
-CLOUD_WS_URL=wss://your-backend.onrender.com/ws/queue
-SELECTED_PRINTER_NAME=HP LaserJet Pro M404dn (B&W High Speed)
-MOCK_PRINTING=false
-RAW_PDF_SUPPORTED=false
-```
+1. **Launch the Executable**:
+   - The operator launches `CBPMS_CounterDesk.exe`.
+   - An in-app **Sign-In Window** appears immediately.
+2. **Operator Credentials**:
+   - The operator enters their **Username** and **Password** (as created in Supabase/Backend).
+   - **No Signup Option**: As by design, there is no signup button or page on the app. All shops and operators are provisioned exclusively through the backend/Supabase dashboard.
+   - If invalid credentials are provided, access is blocked and the operator remains on the sign-in screen with an error banner until valid credentials are submitted.
+3. **Dynamic Shop Binding**:
+   - Upon successful sign-in, the backend returns the operator's assigned `shop_id`.
+   - The software automatically binds to that shop's queue, profiles, and printers without any manual setup.
+4. **Session Persistence**:
+   - The username and station configuration are automatically remembered on the counter PC in `%LOCALAPPDATA%\CBPMS\state\session.json`.
+   - Clicking **Sign Out** returns the user safely to the sign-in prompt.
 
 ---
 

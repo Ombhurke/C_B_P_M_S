@@ -16,6 +16,7 @@ from agent.core.ws_client import DesktopWebSocketClient
 from agent.core.lifecycle import PrintLifecycleManager, JobLifecycleStage
 from agent.spooler.win32_spooler import spooler_bridge
 from agent.ui.shell import CounterDeskShell
+from agent.ui.login_dialog import LoginDialog
 
 
 class DesktopAgentController(QObject):
@@ -287,7 +288,15 @@ class DesktopAgentController(QObject):
 
     def handle_sign_out(self):
         self.ws_client.stop()
-        self.app.quit()
+        api_client.token = ""
+        self.shell.hide()
+        login_dlg = LoginDialog()
+        if login_dlg.exec() == QDialog.Accepted:
+            self.refresh_all_data()
+            self.ws_client.start()
+            self.shell.show()
+        else:
+            self.app.quit()
 
     @Slot(str)
     def _show_error_dialog(self, message: str):
@@ -298,30 +307,34 @@ class DesktopAgentController(QObject):
         QMessageBox.information(self.shell, "Counter Desk", message)
 
 
-def prompt_credentials():
-    username = agent_settings.OPERATOR_USERNAME
-    password = agent_settings.OPERATOR_PASSWORD
-    return username, password
-
-
 def run_app():
     app = QApplication(sys.argv)
     shell = CounterDeskShell()
     controller = DesktopAgentController(shell, app)
 
-    username, password = prompt_credentials()
-    if not username or not password:
-        print("[Desktop Agent] Missing credentials in .env.", file=sys.stderr)
-        return
+    # 1. Direct login if credentials provided via environment/flags
+    if agent_settings.OPERATOR_USERNAME and agent_settings.OPERATOR_PASSWORD:
+        try:
+            api_client.login(agent_settings.OPERATOR_USERNAME, agent_settings.OPERATOR_PASSWORD)
+            controller.refresh_all_data()
+            controller.ws_client.start()
+            shell.show()
+            return sys.exit(app.exec())
+        except Exception as exc:
+            print(f"[Desktop Agent] Auto-login with env failed: {exc}", file=sys.stderr)
+
+    # 2. Interactive in-app Login Dialog
+    login_dlg = LoginDialog()
+    if login_dlg.exec() != QDialog.Accepted:
+        return 0
 
     try:
-        api_client.login(username, password)
         controller.refresh_all_data()
         controller.ws_client.start()
         shell.show()
     except Exception as exc:
-        QMessageBox.critical(None, "Sign-In Failed", f"Sign-in rejected: {exc}")
-        return
+        QMessageBox.critical(None, "Startup Error", f"Failed to initialize desk: {exc}")
+        return 1
 
     sys.exit(app.exec())
 

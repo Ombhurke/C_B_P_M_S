@@ -50,6 +50,18 @@ class Database:
             raise ValueError("PostgreSQL is required outside automated tests")
         if settings.ENVIRONMENT != "test" and parsed.query.get("sslmode") != "verify-full":
             raise ValueError("Production database connections require sslmode=verify-full")
+        if self.postgres:
+            bundled_cert = Path(__file__).resolve().parents[2] / "certs" / "supabase-prod-ca-2021.crt"
+            query = dict(parsed.query)
+            sslrootcert = query.get("sslrootcert")
+            # If sslrootcert is missing or points to a non-existent path on this machine/container:
+            if not sslrootcert or not Path(sslrootcert).exists():
+                if bundled_cert.exists():
+                    query["sslrootcert"] = str(bundled_cert.resolve())
+                else:
+                    query["sslrootcert"] = "system"
+                parsed = parsed.set(query=query)
+                url = parsed.render_as_string(hide_password=False)
         if not self.postgres and parsed.database not in (None, ":memory:"):
             Path(parsed.database).parent.mkdir(parents=True, exist_ok=True)
         self.engine = create_engine(url, pool_pre_ping=True, **(

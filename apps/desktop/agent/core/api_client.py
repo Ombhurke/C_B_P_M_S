@@ -19,6 +19,14 @@ class DesktopApiClient:
         self.password = ""
         self.lock = threading.Lock()
 
+    def set_base_url(self, base_url: str):
+        url = (base_url or agent_settings.CLOUD_API_URL).rstrip("/")
+        if url.startswith("http://localhost:"):
+            url = url.replace("http://localhost:", "http://127.0.0.1:", 1)
+        elif url.startswith("https://localhost:"):
+            url = url.replace("https://localhost:", "https://127.0.0.1:", 1)
+        self.base_url = url
+
     def login(self, username, password):
         with self.lock:
             last_conn_error = None
@@ -34,14 +42,15 @@ class DesktopApiClient:
                         raise ValueError("Invalid operator username or password")
                     response.raise_for_status()
                     result = response.json()
-                    if result["user"]["shop_id"] != agent_settings.SHOP_ID:
-                        raise ValueError(
-                            f"Account belongs to shop '{result['user']['shop_id']}', but this agent is configured for '{agent_settings.SHOP_ID}'"
-                        )
+                    user = result.get("user", {})
+                    user_shop = user.get("shop_id")
+                    if not user_shop:
+                        raise ValueError("Account is not assigned to any shop. Please contact the administrator.")
+                    agent_settings.SHOP_ID = user_shop
                     self.token = result["access_token"]
                     self.username, self.password = username, password
-                    self.role = result.get("user", {}).get("role", "operator")
-                    self.user_data = result.get("user", {})
+                    self.role = user.get("role", "operator")
+                    self.user_data = user
                     return
                 except (requests.ConnectionError, requests.Timeout) as exc:
                     last_conn_error = exc

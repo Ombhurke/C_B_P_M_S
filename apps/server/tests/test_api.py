@@ -704,3 +704,32 @@ def test_razorpay_verification_flow(client, monkeypatch):
     assert verify_data["payment_method"] == "razorpay"
     assert verify_data["job_status"] == "queued"
     assert len(verify_data["release_token"]) == 4
+
+
+def test_database_auto_resolves_sslrootcert(monkeypatch):
+    from app.core.database import Database
+    from sqlalchemy.engine import make_url
+    from sqlalchemy import create_engine as real_create_engine
+
+    db_instance = Database()
+    fake_url = "postgresql+psycopg://user:pass@localhost:5432/postgres?sslmode=verify-full&sslrootcert=D:/nonexistent/fake.crt"
+
+    captured_urls = []
+
+    def mock_create_engine(url, **kwargs):
+        captured_urls.append(str(url))
+        return real_create_engine("sqlite:///:memory:")
+
+    monkeypatch.setattr("app.core.database.create_engine", mock_create_engine)
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+
+    try:
+        db_instance.initialize(fake_url)
+    except Exception:
+        pass
+
+    assert len(captured_urls) == 1
+    parsed_captured = make_url(captured_urls[0])
+    resolved_cert = parsed_captured.query.get("sslrootcert", "")
+    assert "D:/nonexistent/fake.crt" not in resolved_cert
+    assert "supabase-prod-ca-2021.crt" in resolved_cert or resolved_cert == "system"

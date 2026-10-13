@@ -63,6 +63,7 @@ def main():
         "--hidden-import=pydantic",
         "--hidden-import=pydantic_settings",
         "--hidden-import=requests",
+        "--hidden-import=agent.ui.login_dialog",
         "--add-data=.env.example;.",
         "--exclude-module=tkinter",
         "--exclude-module=matplotlib",
@@ -70,7 +71,7 @@ def main():
         "--exclude-module=torch",
         "--exclude-module=tensorflow",
         "--clean",
-        "--y",
+        "--noconfirm",
     ]
 
     if is_debug:
