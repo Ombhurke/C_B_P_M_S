@@ -90,6 +90,11 @@ function ShopCustomerContent() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
+  const handleCaptchaVerify = React.useCallback((token: string) => {
+    setCaptchaToken(token);
+    setPaymentError(null);
+  }, []);
+
   const [config, setConfig] = useState<PrintConfig>({
     file: null,
     fileName: '',
@@ -955,7 +960,7 @@ function ShopCustomerContent() {
                 {/* Anti-Bot Verification for Anonymous Guests */}
                 {accessMode === 'anonymous' && (
                   <TurnstileWidget
-                    onVerify={(token) => setCaptchaToken(token)}
+                    onVerify={handleCaptchaVerify}
                     onError={() => setPaymentError('Security check failed. Please refresh and try again.')}
                     className="mb-2"
                   />

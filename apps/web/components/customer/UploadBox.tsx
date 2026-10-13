@@ -132,7 +132,7 @@ export default function UploadBox({
         try {
           const file = await new Promise<File>((res, rej) => entry.file(res, rej));
           collectedFiles.push(file);
-        } catch {}
+        } catch { }
       } else if (entry.isDirectory) {
         hasDirectory = true;
         if (!detectedDirName) detectedDirName = entry.name;
@@ -228,11 +228,10 @@ export default function UploadBox({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`relative border-2 border-dashed rounded-3xl p-8 sm:p-11 flex flex-col items-center justify-center text-center transition-all duration-200 ${
-            isDragging
+          className={`relative border-2 border-dashed rounded-3xl p-8 sm:p-11 flex flex-col items-center justify-center text-center transition-all duration-200 ${isDragging
               ? 'border-[#c05634] bg-[#fdf3ea] scale-[1.005]'
               : 'border-[#e6dfd5] bg-[#faf6f0] hover:bg-[#f5ede3] hover:border-[#c05634]/60'
-          }`}
+            }`}
         >
           <div className="w-16 h-16 rounded-2xl bg-[#fdf3ea] border border-[#f5d0b5] flex items-center justify-center mb-4 text-[#c05634]">
             <UploadCloud className="w-8 h-8" />
