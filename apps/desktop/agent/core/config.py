@@ -1,12 +1,25 @@
 import os
+import sys
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _resolve_env_file() -> Path:
+    if getattr(sys, "frozen", False):
+        exe_env = Path(sys.executable).resolve().parent / ".env"
+        if exe_env.exists():
+            return exe_env
+    cwd_env = Path.cwd() / ".env"
+    if cwd_env.exists():
+        return cwd_env
+    repo_env = Path(__file__).resolve().parents[2] / ".env"
+    return repo_env
 
 
 class AgentSettings(BaseSettings):
     model_config = SettingsConfigDict(
         case_sensitive=True,
-        env_file=Path(__file__).resolve().parents[2] / ".env",
+        env_file=_resolve_env_file(),
         extra="ignore"
     )
 

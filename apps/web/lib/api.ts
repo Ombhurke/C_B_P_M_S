@@ -42,9 +42,11 @@ export function fetchShop(shopId: string): Promise<Shop> {
   return request<Shop>(`/shops/${encodeURIComponent(shopId)}`);
 }
 
-function form(shopId: string, config: PrintConfig) {
+export { calculateClientCost } from './pricing';
+
+function form(shopId: string, config: PrintConfig, clientQuotedCost?: number) {
   const body = new FormData();
-  const values = {
+  const values: Record<string, any> = {
     shop_id: shopId,
     page_count: config.pageCount,
     copy_count: config.copyCount,
@@ -53,6 +55,9 @@ function form(shopId: string, config: PrintConfig) {
     layout_nup: config.layoutNup,
     paper_type: config.paperType || 'normal',
   };
+  if (clientQuotedCost !== undefined && clientQuotedCost !== null) {
+    values.client_quoted_cost = clientQuotedCost;
+  }
   Object.entries(values).forEach(([key, value]) => body.append(key, String(value)));
   return body;
 }
@@ -66,9 +71,10 @@ export function stagePrintJob(
   config: PrintConfig,
   accessMode: AccessMode = 'anonymous',
   token?: string,
+  clientQuotedCost?: number,
 ): Promise<StagedJobResponse> {
   if (config.isFolder && config.folderFiles && config.folderFiles.length > 0) {
-    const body = form(shopId, config);
+    const body = form(shopId, config, clientQuotedCost);
     body.append('folder_name', config.fileName || 'Folder_Bundle');
     body.append('access_mode', accessMode);
     config.folderFiles.forEach((file) => body.append('files', file));
@@ -76,7 +82,7 @@ export function stagePrintJob(
   }
 
   if (!config.file) throw new Error('Select a document first');
-  const body = form(shopId, config);
+  const body = form(shopId, config, clientQuotedCost);
   body.append('file', config.file);
   body.append('page_range', 'all');
   body.append('access_mode', accessMode);

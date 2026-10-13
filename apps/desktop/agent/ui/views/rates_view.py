@@ -119,12 +119,21 @@ class RatesView(QWidget):
     def update_rates(self, shop: dict, is_owner: bool):
         self.shop_data = shop or {}
         self.is_owner = is_owner
-        base = self.shop_data.get("base_rates", {})
-        paper = self.shop_data.get("paper_rates", {})
+        bw_rate = float(self.shop_data.get("base_bw_rate", 2.0))
+        color_rate = float(self.shop_data.get("base_color_rate", 10.0))
+        paper = self.shop_data.get("paper_rates") or {}
 
-        self.spin_bw.setValue(float(base.get("bw_normal", 2.0)))
-        self.spin_color.setValue(float(base.get("color_normal", 5.0)))
-        self.spin_glossy.setValue(float(paper.get("glossy", 10.0)))
+        glossy_cfg = paper.get("glossy")
+        if isinstance(glossy_cfg, dict):
+            glossy_rate = float(glossy_cfg.get("bw_single", 10.0))
+        elif isinstance(glossy_cfg, (int, float)):
+            glossy_rate = float(glossy_cfg)
+        else:
+            glossy_rate = 10.0
+
+        self.spin_bw.setValue(bw_rate)
+        self.spin_color.setValue(color_rate)
+        self.spin_glossy.setValue(glossy_rate)
 
         self.spin_bw.setEnabled(is_owner)
         self.spin_color.setEnabled(is_owner)
@@ -137,15 +146,35 @@ class RatesView(QWidget):
             self.lbl_perm_note.setText("Owner account: Modifications sync to customer checkout quote engine.")
 
     def _on_save_clicked(self):
-        payload = {
-            "base_rates": {
-                "bw_normal": self.spin_bw.value(),
-                "color_normal": self.spin_color.value()
+        bw = self.spin_bw.value()
+        color = self.spin_color.value()
+        glossy = self.spin_glossy.value()
+        existing_paper = dict(self.shop_data.get("paper_rates") or {})
+
+        paper_rates = {
+            **existing_paper,
+            "normal": {
+                "bw_single": bw,
+                "bw_duplex": max(0.1, round(bw * 2 - 0.5, 2)),
+                "color_single": color,
+                "color_duplex": max(0.1, round(color * 2 - 1.0, 2))
             },
-            "paper_rates": {
-                "normal": 0.0,
-                "bond": 2.0,
-                "glossy": self.spin_glossy.value()
+            "bond": existing_paper.get("bond") or {
+                "bw_single": max(round(bw + 1.0, 2), 3.0),
+                "bw_duplex": max(round(bw * 2, 2), 5.0),
+                "color_single": max(round(color + 2.0, 2), 12.0),
+                "color_duplex": max(round(color * 2, 2), 22.0)
+            },
+            "glossy": {
+                "bw_single": glossy,
+                "bw_duplex": round(glossy * 2, 2),
+                "color_single": round(glossy + 5.0, 2),
+                "color_duplex": round((glossy + 5.0) * 2, 2)
             }
+        }
+        payload = {
+            "base_bw_rate": bw,
+            "base_color_rate": color,
+            "paper_rates": paper_rates
         }
         self.save_rates_requested.emit(payload)

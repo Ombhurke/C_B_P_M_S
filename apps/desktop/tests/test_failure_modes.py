@@ -135,3 +135,53 @@ def test_outbox_replay_persists_across_restart_without_reprinting(tmp_path):
     # Acknowledge and ensure removal
     outbox2.acknowledge(pending[0])
     assert outbox2.pending() == []
+
+
+def test_a_to_b_dispatch_mismatch_is_blocked(tmp_path, monkeypatch):
+    manager, logs = setup_env(tmp_path, monkeypatch)
+
+    monkeypatch.setattr(api_client, "verify_release_token", Mock(return_value={
+        "job_id": "job-A",
+        "file_name": "docA.pdf",
+        "download_url": "/fileA",
+        "file_hash": "hashA",
+        "is_color": False,
+        "duplex_mode": "simplex",
+        "copy_count": 1,
+        "layout_nup": 1
+    }))
+    monkeypatch.setattr(api_client, "download_staged_document", lambda u, p, h: Path(p).write_bytes(b"%PDF"))
+    manager.find_and_review("1234")
+
+    assert manager.active_job["job_id"] == "job-A"
+
+    # Attempt dispatch targeting job-B while job-A is active
+    mismatch_dispatch = manager.submit_print("HP LaserJet", target_job_id="job-B")
+    assert mismatch_dispatch is False
+    assert any("does not match active authorized context job-A" in log for log in logs)
+
+
+def test_scan_blocked_while_dispatch_or_confirmation_active(tmp_path, monkeypatch):
+    manager, logs = setup_env(tmp_path, monkeypatch)
+
+    manager.stage = JobLifecycleStage.SUBMITTING
+    job = manager.find_and_review("1234")
+    assert job is None
+    assert any("Cannot start new review while a print dispatch is in progress" in log for log in logs)
+
+
+def test_report_issue_permanent_4xx_not_enqueued_into_outbox(tmp_path, monkeypatch):
+    manager, logs = setup_env(tmp_path, monkeypatch)
+    manager.active_job = {"job_id": "job-test-422"}
+
+    # Mock 422 Unprocessable Entity error
+    class MockHTTPError(Exception):
+        def __init__(self):
+            self.response = Mock(status_code=422)
+
+    monkeypatch.setattr(api_client, "report_issue", Mock(side_effect=MockHTTPError()))
+
+    res = manager.report_issue(issue_type="hardware_error", notes="bad")
+    assert res is False
+    assert manager.completion_outbox.pending() == []
+    assert any("rejected permanently by server (422" in log for log in logs)

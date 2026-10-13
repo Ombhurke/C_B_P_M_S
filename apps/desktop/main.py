@@ -1,5 +1,11 @@
+import json
 import os
 import sys
+
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if _BASE_DIR not in sys.path:
+    sys.path.insert(0, _BASE_DIR)
+
 import threading
 from PySide6.QtWidgets import QApplication, QMessageBox, QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton
 from PySide6.QtCore import QObject, Signal, Slot
@@ -24,12 +30,17 @@ class DesktopAgentController(QObject):
         super().__init__()
         self.shell = shell
         self.app = app
+        self.installed_printers = []
         self.selected_printer = agent_settings.SELECTED_PRINTER_NAME
+        self.station_name = "Station Local"
+        self._load_station_config()
         self.shop_profile = {}
         self.summary_data = {}
         self.queue_jobs = []
         self.team_members = []
-        self.installed_printers = []
+        self.audit_events = []
+        self._is_refreshing = False
+        self.operator_password = agent_settings.OPERATOR_PASSWORD
 
         self.lifecycle = PrintLifecycleManager(
             on_stage_change=self._on_lifecycle_stage,
@@ -39,12 +50,40 @@ class DesktopAgentController(QObject):
 
         self._wire_signals()
 
+    def _load_station_config(self):
+        try:
+            config_path = os.path.join(agent_settings.LOCAL_STATE_DIR, "station_config.json")
+            if os.path.exists(config_path):
+                with open(config_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                    if cfg.get("selected_printer"):
+                        self.selected_printer = cfg["selected_printer"]
+                    if cfg.get("station_name"):
+                        self.station_name = cfg["station_name"]
+        except Exception as e:
+            print(f"[CounterDesk] Error reading station config: {e}")
+
+    def _save_station_config(self):
+        try:
+            os.makedirs(agent_settings.LOCAL_STATE_DIR, exist_ok=True)
+            config_path = os.path.join(agent_settings.LOCAL_STATE_DIR, "station_config.json")
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump({
+                    "selected_printer": self.selected_printer,
+                    "station_name": self.station_name
+                }, f, indent=2)
+        except Exception as e:
+            print(f"[CounterDesk] Error saving station config: {e}")
+
     def _wire_signals(self):
         self.data_refreshed.connect(self._apply_data_to_views)
         self.review_ready.connect(self._apply_review_ready)
         self.print_completed.connect(self._apply_print_completed)
         self.error_occurred.connect(self._show_error_dialog)
         self.info_occurred.connect(self._show_info_dialog)
+
+        # Genuine station lock authentication validator
+        self.shell.set_unlock_validator(self._validate_unlock_password)
 
         # Connect Shell signals
         self.shell.scan_submitted.connect(self.handle_find_review)
@@ -54,16 +93,41 @@ class DesktopAgentController(QObject):
         self.shell.hold_submitted.connect(self.handle_hold_job)
         self.shell.abandon_review_submitted.connect(self.handle_abandon_review)
         self.shell.rates_saved.connect(self.handle_save_rates)
-        self.shell.staff_invited.connect(self.handle_invite_staff)
         self.shell.profile_updated.connect(self.handle_update_profile)
         self.shell.map_printer_submitted.connect(self.handle_printer_change)
-        self.shell.reconnect_submitted.connect(self.refresh_all_data)
+        self.shell.reconnect_submitted.connect(lambda: self.refresh_all_data(user_initiated=True))
+        self.shell.v_recovery.refresh_history_requested.connect(lambda: self.refresh_all_data(user_initiated=True))
         self.shell.retry_sync_submitted.connect(self.handle_retry_sync)
         self.shell.sign_out_submitted.connect(self.handle_sign_out)
 
+    def _validate_unlock_password(self, entered: str) -> bool:
+        if not entered:
+            return False
+        if getattr(self, "operator_password", None) and entered == self.operator_password:
+            return True
+        try:
+            from agent.core.api_client import DesktopApiClient
+            client = DesktopApiClient()
+            client.login(api_client.username, entered)
+            return True
+        except Exception:
+            return False
+
     def _handle_ws_event(self, event, data):
-        if event != "PONG":
-            self.refresh_all_data()
+        if event == "CONNECTED":
+            self.refresh_all_data(user_initiated=False)
+        elif event == "DISCONNECTED":
+            shop_name = self.shop_profile.get("name", "QuickPrints")
+            role = getattr(api_client, "role", "operator")
+            self.shell.update_top_bar(shop_name, self._format_station_label(), role, False)
+        elif event not in ("PONG", "PINGS"):
+            self.refresh_all_data(user_initiated=False)
+
+    def _format_station_label(self):
+        stations = self.shop_profile.get("stations", [])
+        if stations:
+            return self.station_name
+        return f"{self.station_name} (Local)"
 
     def _on_lifecycle_stage(self, stage: str, data: dict):
         pass
@@ -71,7 +135,11 @@ class DesktopAgentController(QObject):
     def _on_lifecycle_log(self, message: str):
         print(f"[CounterDesk Lifecycle] {message}")
 
-    def refresh_all_data(self):
+    def refresh_all_data(self, user_initiated: bool = False):
+        if getattr(self, "_is_refreshing", False):
+            return
+        self._is_refreshing = True
+
         def worker():
             try:
                 self.lifecycle.flush_outbox()
@@ -80,9 +148,21 @@ class DesktopAgentController(QObject):
                 self.summary_data = api_client.fetch_shop_summary()
                 self.queue_jobs = api_client.fetch_shop_queue()
                 self.team_members = api_client.fetch_team()
+                try:
+                    self.audit_events = api_client.fetch_shop_activity()
+                except Exception:
+                    self.audit_events = []
                 self.data_refreshed.emit()
             except Exception as exc:
-                self.error_occurred.emit(f"Data refresh failed: {exc}")
+                print(f"[CounterDesk Sync] Background refresh failed: {exc}")
+                shop_name = self.shop_profile.get("name", "QuickPrints")
+                role = getattr(api_client, "role", "operator")
+                self.shell.update_top_bar(shop_name, self._format_station_label(), role, False)
+                if user_initiated:
+                    self.error_occurred.emit(f"Connection failed: {exc}")
+            finally:
+                self._is_refreshing = False
+
         threading.Thread(target=worker, daemon=True).start()
 
     @Slot()
@@ -91,7 +171,7 @@ class DesktopAgentController(QObject):
         role = getattr(api_client, "role", "operator")
         is_owner = (role == "admin")
 
-        self.shell.update_top_bar(shop_name, "Station Alpha", role, True)
+        self.shell.update_top_bar(shop_name, self._format_station_label(), role, True)
 
         is_printer_ready = bool(self.selected_printer in self.installed_printers)
         self.shell.v_overview.update_data(self.queue_jobs, self.summary_data, self.selected_printer, is_printer_ready)
@@ -101,7 +181,7 @@ class DesktopAgentController(QObject):
         self.shell.v_team.update_data(self.team_members, self.shop_profile, is_owner)
 
         pending_items = self.lifecycle.completion_outbox.pending()
-        self.shell.v_recovery.update_data(pending_items, [])
+        self.shell.v_recovery.update_data(pending_items, getattr(self, "audit_events", []))
         self.shell.v_settings.set_station_info(
             api_client.username, role, shop_name, agent_settings.SHOP_ID,
             self.installed_printers, self.selected_printer, len(pending_items)
@@ -122,9 +202,9 @@ class DesktopAgentController(QObject):
         self.shell.v_review.set_job(job, preview_path, self.installed_printers, self.selected_printer)
         self.shell.navigate_to("review")
 
-    def handle_submit_print(self, printer_name: str):
+    def handle_submit_print(self, printer_name: str, job_id: str = ""):
         def worker():
-            success = self.lifecycle.submit_print(printer_name)
+            success = self.lifecycle.submit_print(printer_name, target_job_id=job_id)
             if success:
                 self.print_completed.emit(self.lifecycle.active_job, self.lifecycle.active_spool_id or "")
             else:
@@ -139,22 +219,25 @@ class DesktopAgentController(QObject):
     def handle_confirm_output(self, notes: str):
         def worker():
             self.lifecycle.confirm_output(notes)
-            self.refresh_all_data()
+            self.refresh_all_data(user_initiated=False)
             self.info_occurred.emit("Output confirmed. Customer document processed.")
         threading.Thread(target=worker, daemon=True).start()
 
     def handle_report_problem(self, issue_type: str, notes: str):
         def worker():
-            self.lifecycle.report_issue(issue_type, notes)
-            self.refresh_all_data()
-            self.info_occurred.emit("Issue reported. Document retained in recovery.")
+            ok = self.lifecycle.report_issue(issue_type, notes)
+            self.refresh_all_data(user_initiated=False)
+            if ok:
+                self.info_occurred.emit("Issue reported. Document retained in recovery.")
+            else:
+                self.error_occurred.emit("Failed to report issue. Server rejected the request.")
         threading.Thread(target=worker, daemon=True).start()
 
     def handle_hold_job(self, job_id: str, reason: str):
         def worker():
             try:
                 api_client.reject_job(job_id, reason)
-                self.refresh_all_data()
+                self.refresh_all_data(user_initiated=False)
                 self.info_occurred.emit(f"Job {job_id} held with reason: {reason}")
             except Exception as exc:
                 self.error_occurred.emit(f"Failed to hold job: {exc}")
@@ -163,34 +246,28 @@ class DesktopAgentController(QObject):
     def handle_abandon_review(self):
         def worker():
             self.lifecycle.abandon_claim()
-            self.refresh_all_data()
+            self.refresh_all_data(user_initiated=False)
         threading.Thread(target=worker, daemon=True).start()
 
     def handle_save_rates(self, payload: dict):
         def worker():
             try:
-                api_client.update_rates(payload)
-                self.refresh_all_data()
+                updated = api_client.update_rates(payload)
+                if isinstance(updated, dict):
+                    self.shop_profile.update(updated)
+                self.data_refreshed.emit()
                 self.info_occurred.emit("Shop rates updated successfully.")
             except Exception as exc:
                 self.error_occurred.emit(f"Failed to save rates: {exc}")
         threading.Thread(target=worker, daemon=True).start()
 
-    def handle_invite_staff(self, username: str, role: str, password: str):
-        def worker():
-            try:
-                api_client.invite_team_member(username, role, password)
-                self.refresh_all_data()
-                self.info_occurred.emit(f"Staff member {username} invited successfully.")
-            except Exception as exc:
-                self.error_occurred.emit(f"Failed to add staff member: {exc}")
-        threading.Thread(target=worker, daemon=True).start()
-
     def handle_update_profile(self, payload: dict):
         def worker():
             try:
-                api_client.update_profile(payload)
-                self.refresh_all_data()
+                updated = api_client.update_profile(payload)
+                if isinstance(updated, dict):
+                    self.shop_profile.update(updated)
+                self.data_refreshed.emit()
                 self.info_occurred.emit("Shop profile updated successfully.")
             except Exception as exc:
                 self.error_occurred.emit(f"Failed to update profile: {exc}")
@@ -198,6 +275,7 @@ class DesktopAgentController(QObject):
 
     def handle_printer_change(self, printer_name: str):
         self.selected_printer = printer_name
+        self._save_station_config()
         self._apply_data_to_views()
 
     def handle_retry_sync(self):

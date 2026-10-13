@@ -18,6 +18,7 @@ class NativeSpoolerBridge:
     """Interfaces with Windows Print Subsystem via win32print."""
     def __init__(self):
         self.is_native_available = HAS_WIN32PRINT and (sys.platform == "win32")
+        self.last_job_id: Optional[str] = None
 
     def list_installed_printers(self) -> List[str]:
         """Queries local Windows printer devices."""
@@ -52,7 +53,8 @@ class NativeSpoolerBridge:
         doc_title = f"CBPMS_Job_{job_meta.get('job_id', 'unknown')}_{os.path.basename(file_path)}"
 
         if agent_settings.MOCK_PRINTING:
-            print("[Spooler:Mock] Simulated print; no physical output")
+            self.last_job_id = f"Spool-{int(time.time() * 1000) % 100000}"
+            print(f"[Spooler:Mock] Simulated print {self.last_job_id}; no physical output")
             return True
         if not self.is_native_available:
             raise RuntimeError("Windows printer support is unavailable; simulation is disabled")
@@ -67,6 +69,7 @@ class NativeSpoolerBridge:
                 try:
                     # Initialize print job
                     h_job = win32print.StartDocPrinter(h_printer, 1, (doc_title, None, "RAW"))
+                    self.last_job_id = str(h_job)
                     win32print.StartPagePrinter(h_printer)
                     
                     with open(file_path, "rb") as f:

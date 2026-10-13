@@ -14,6 +14,7 @@ import {
 import {
   fetchShop,
   calculateCost,
+  calculateClientCost,
   fetchCustomerDocument,
   stagePrintJob,
   createPaymentOrder,
@@ -179,33 +180,22 @@ function ShopCustomerContent() {
     }
   }, [config.file]);
 
-  // Server quote calculation
+  // Instant client-side quote calculation (0ms latency, zero server compute on option changes)
   useEffect(() => {
-    let active = true;
-    if (shop && (config.file || selectedLibraryDoc)) {
-      setIsCalculatingQuote(true);
-      setQuoteError('');
-      calculateCost(shop, config)
-        .then((res) => {
-          if (active) {
-            setCostCalc(res);
-            setIsCalculatingQuote(false);
-          }
-        })
-        .catch((err) => {
-          if (active) {
-            setCostCalc(null);
-            setQuoteError(err instanceof Error ? err.message : 'Could not calculate quote');
-            setIsCalculatingQuote(false);
-          }
-        });
+    if (shop && (config.file || selectedLibraryDoc) && config.pageCount > 0) {
+      try {
+        const quote = calculateClientCost(shop, config);
+        setCostCalc(quote);
+        setQuoteError('');
+      } catch (err) {
+        setCostCalc(null);
+        setQuoteError(err instanceof Error ? err.message : 'Could not calculate quote');
+      }
     } else {
       setCostCalc(null);
-      setIsCalculatingQuote(false);
+      setQuoteError('');
     }
-    return () => {
-      active = false;
-    };
+    setIsCalculatingQuote(false);
   }, [shop, config, selectedLibraryDoc]);
 
   const handleFileSelect = (
@@ -250,7 +240,7 @@ function ShopCustomerContent() {
     setPaymentError(null);
 
     try {
-      const staged = await stagePrintJob(shop.id, config, accessMode);
+      const staged = await stagePrintJob(shop.id, config, accessMode, undefined, costCalc?.total_cost);
       const order = await createPaymentOrder(staged);
 
       if (order.provider === 'mock') {
@@ -322,7 +312,7 @@ function ShopCustomerContent() {
     setPaymentError(null);
 
     try {
-      const staged = await stagePrintJob(shop.id, config, accessMode);
+      const staged = await stagePrintJob(shop.id, config, accessMode, undefined, costCalc?.total_cost);
       const receipt = await payAtCounter(staged);
       setCompletedReceipt(receipt);
     } catch (err) {

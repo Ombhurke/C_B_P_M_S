@@ -1,11 +1,11 @@
 """Staff & Shop View (08-team) for Counter Desk Desktop.
 Displays team memberships and shop profile details.
-Owner-gated staff invites and profile updates; no fabricated passwords or fake data.
+Displays existing staff only, with owner-gated profile updates.
 """
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QFrame, QAbstractItemView,
-    QInputDialog, QMessageBox
+    QInputDialog
 )
 from PySide6.QtCore import Qt, Signal
 from agent.ui.theme import (
@@ -14,7 +14,6 @@ from agent.ui.theme import (
 
 
 class StaffView(QWidget):
-    invite_staff_requested = Signal(str, str, str)  # username, role, password
     update_profile_requested = Signal(dict)
 
     def __init__(self, parent=None):
@@ -32,7 +31,7 @@ class StaffView(QWidget):
         # Header
         title_lbl = QLabel("The right access, at your counter.")
         title_lbl.setObjectName("headerTitle")
-        sub_lbl = QLabel("Manage station operator memberships and shop profile information.")
+        sub_lbl = QLabel("View existing staff memberships and manage shop profile information.")
         sub_lbl.setObjectName("headerSubtitle")
         main_layout.addWidget(title_lbl)
         main_layout.addWidget(sub_lbl)
@@ -51,10 +50,6 @@ class StaffView(QWidget):
         hdr_row.addWidget(t_title)
         hdr_row.addStretch()
 
-        self.btn_add_staff = QPushButton("Add staff member")
-        self.btn_add_staff.setObjectName("primaryAction")
-        self.btn_add_staff.clicked.connect(self._on_add_staff)
-        hdr_row.addWidget(self.btn_add_staff)
         left_box.addLayout(hdr_row)
 
         self.table = QTableWidget(0, 4)
@@ -82,7 +77,7 @@ class StaffView(QWidget):
         op_lbl.setWordWrap(True)
         pc_layout.addWidget(op_lbl)
 
-        ow_lbl = QLabel("• Owner / Admin: Manage rates, invite staff, edit shop profile")
+        ow_lbl = QLabel("• Owner / Admin: Manage rates, view staff, edit shop profile")
         ow_lbl.setStyleSheet(f"font-size: 13px; color: {COLOR_TEXT_MUTED};")
         ow_lbl.setWordWrap(True)
         pc_layout.addWidget(ow_lbl)
@@ -123,35 +118,23 @@ class StaffView(QWidget):
         self.shop_profile = shop or {}
         self.is_owner = is_owner
 
-        self.btn_add_staff.setEnabled(is_owner)
         self.btn_edit_profile.setEnabled(is_owner)
 
         self.lbl_shop_name.setText(f"Name: {self.shop_profile.get('name', 'QuickPrints')}")
         self.lbl_shop_addr.setText(f"Address: {self.shop_profile.get('address', 'Not set')}")
-        self.lbl_shop_phone.setText(f"Contact: {self.shop_profile.get('contact_number', 'Not set')}")
+        self.lbl_shop_phone.setText(f"Contact: {self.shop_profile.get('phone') or self.shop_profile.get('contact_number', 'Not set')}")
 
         self.table.setRowCount(len(self.team_members))
         for row, member in enumerate(self.team_members):
             uname = member.get("username", "")
             role = member.get("role", "operator").capitalize()
             status = "Active" if member.get("active", True) else "Inactive"
-            last_act = member.get("last_active") or "Active recently"
+            last_act = member.get("last_active") or "Unknown / Never recorded"
 
             for col, text in enumerate((uname, role, status, last_act)):
                 item = QTableWidgetItem(str(text))
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.table.setItem(row, col, item)
-
-    def _on_add_staff(self):
-        uname, ok = QInputDialog.getText(self, "Invite Staff Member", "Enter staff username (email):")
-        if not ok or not uname.strip():
-            return
-        pwd, ok2 = QInputDialog.getText(self, "Staff Password", "Enter temporary password:")
-        if not ok2 or not pwd.strip():
-            return
-        role, ok3 = QInputDialog.getItem(self, "Staff Role", "Select role:", ["operator", "admin"], 0, False)
-        if ok3:
-            self.invite_staff_requested.emit(uname.strip().lower(), role, pwd.strip())
 
     def _on_edit_profile(self):
         name, ok = QInputDialog.getText(self, "Edit Shop Name", "Shop name:", text=self.shop_profile.get("name", ""))
@@ -160,10 +143,10 @@ class StaffView(QWidget):
         addr, ok2 = QInputDialog.getText(self, "Edit Address", "Shop address:", text=self.shop_profile.get("address", ""))
         if not ok2:
             return
-        phone, ok3 = QInputDialog.getText(self, "Edit Phone", "Contact number:", text=self.shop_profile.get("contact_number", ""))
+        phone, ok3 = QInputDialog.getText(self, "Edit Phone", "Contact phone:", text=self.shop_profile.get("phone") or self.shop_profile.get("contact_number", ""))
         if ok3:
             self.update_profile_requested.emit({
                 "name": name.strip(),
                 "address": addr.strip(),
-                "contact_number": phone.strip()
+                "phone": phone.strip()
             })

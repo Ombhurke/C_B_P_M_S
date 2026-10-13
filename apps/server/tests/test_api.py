@@ -531,6 +531,32 @@ def test_customer_calculate_cost_paper_matrix_and_nup(client):
     assert res_configured.json()["total_cost"] == 3.0
 
 
+def test_client_quoted_cost_verification_at_checkout(client):
+    writer = PdfWriter()
+    writer.add_blank_page(width=595, height=842)
+    content = io.BytesIO()
+    writer.write(content)
+    pdf_bytes = content.getvalue()
+
+    # Test valid client quote matching server calculation (₹2.00 for 1 B&W page)
+    res_valid = client.post("/api/v1/jobs/stage", data={
+        "shop_id": "shop-demo-1", "page_count": 1, "copy_count": 1,
+        "is_color": False, "duplex_mode": "simplex", "layout_nup": 1, "paper_type": "normal",
+        "client_quoted_cost": 2.00
+    }, files={"file": ("test.pdf", pdf_bytes, "application/pdf")})
+    assert res_valid.status_code == 200
+    assert res_valid.json()["total_cost"] == 2.00
+
+    # Test tampered/mismatched client quote (attacker attempts ₹0.50 instead of ₹2.00)
+    res_mismatch = client.post("/api/v1/jobs/stage", data={
+        "shop_id": "shop-demo-1", "page_count": 1, "copy_count": 1,
+        "is_color": False, "duplex_mode": "simplex", "layout_nup": 1, "paper_type": "normal",
+        "client_quoted_cost": 0.50
+    }, files={"file": ("test.pdf", pdf_bytes, "application/pdf")})
+    assert res_mismatch.status_code == 409
+    assert "Quote mismatch" in res_mismatch.json()["detail"]
+
+
 def test_security_unpaid_job_cannot_be_confirmed_or_reported(client):
     operator = auth(client)
     job = stage(client)

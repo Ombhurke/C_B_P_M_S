@@ -26,13 +26,12 @@ class CounterDeskShell(QMainWindow):
     # Signals for controller integration
     nav_changed = Signal(str)
     scan_submitted = Signal(str)
-    print_submitted = Signal(str)
+    print_submitted = Signal(str, str)
     confirm_output_submitted = Signal(str)
     report_problem_submitted = Signal(str, str)
     hold_submitted = Signal(str, str)
     abandon_review_submitted = Signal()
     rates_saved = Signal(dict)
-    staff_invited = Signal(str, str, str)
     profile_updated = Signal(dict)
     map_printer_submitted = Signal(str)
     reconnect_submitted = Signal()
@@ -196,12 +195,12 @@ class CounterDeskShell(QMainWindow):
 
         # Printers
         self.v_printers.map_printer_requested.connect(self.map_printer_submitted.emit)
+        self.v_printers.refresh_printers_requested.connect(self.reconnect_submitted.emit)
 
         # Rates
         self.v_rates.save_rates_requested.connect(self.rates_saved.emit)
 
         # Staff
-        self.v_team.invite_staff_requested.connect(self.staff_invited.emit)
         self.v_team.update_profile_requested.connect(self.profile_updated.emit)
 
         # Recovery
@@ -213,6 +212,9 @@ class CounterDeskShell(QMainWindow):
         self.v_settings.printer_changed.connect(self.map_printer_submitted.emit)
         self.v_settings.view_recovery_requested.connect(lambda: self.navigate_to("recovery"))
         self.v_settings.sign_out_requested.connect(self.sign_out_submitted.emit)
+
+    def set_unlock_validator(self, validator_fn):
+        self.unlock_validator = validator_fn
 
     def navigate_to(self, view_id: str):
         indices = {
@@ -228,7 +230,11 @@ class CounterDeskShell(QMainWindow):
             self.nav_changed.emit(view_id)
 
     def open_review_for_job(self, job: dict):
-        self.v_review.set_job(job)
+        self.abandon_review_submitted.emit()
+        job_copy = dict(job)
+        job_copy["is_metadata_only"] = True
+        job_copy["is_authorized"] = False
+        self.v_review.set_job(job_copy)
         self.navigate_to("review")
 
     def open_review_for_job_id(self, job_id: str):
@@ -258,15 +264,15 @@ class CounterDeskShell(QMainWindow):
         self.is_locked = True
         dialog = QDialog(self)
         dialog.setWindowTitle("Station Locked")
-        dialog.setFixedSize(400, 240)
+        dialog.setFixedSize(400, 260)
         dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowStaysOnTopHint | Qt.CustomizeWindowHint)
         d_layout = QVBoxLayout(dialog)
         d_layout.setContentsMargins(28, 28, 28, 28)
-        d_layout.setSpacing(14)
+        d_layout.setSpacing(12)
 
         l_title = QLabel("Station is locked.")
         l_title.setObjectName("cardTitle")
-        l_sub = QLabel("Enter password to resume counter station:")
+        l_sub = QLabel("Enter staff password to resume counter station:")
         l_sub.setObjectName("cardMeta")
         d_layout.addWidget(l_title)
         d_layout.addWidget(l_sub)
@@ -275,11 +281,31 @@ class CounterDeskShell(QMainWindow):
         pwd_input.setEchoMode(QLineEdit.Password)
         d_layout.addWidget(pwd_input)
 
+        err_lbl = QLabel("")
+        err_lbl.setStyleSheet("color: #a63a24; font-size: 13px; font-weight: 500;")
+        d_layout.addWidget(err_lbl)
+
+        def try_unlock():
+            entered = pwd_input.text()
+            validator = getattr(self, "unlock_validator", None)
+            if validator:
+                if validator(entered):
+                    self.is_locked = False
+                    dialog.accept()
+                else:
+                    err_lbl.setText("Incorrect password. Please try again.")
+                    pwd_input.clear()
+            else:
+                self.is_locked = False
+                dialog.accept()
+
         btn_unlock = QPushButton("Unlock")
         btn_unlock.setObjectName("primaryAction")
-        btn_unlock.clicked.connect(dialog.accept)
+        btn_unlock.clicked.connect(try_unlock)
         d_layout.addWidget(btn_unlock)
 
-        pwd_input.returnPressed.connect(dialog.accept)
-        dialog.exec()
-        self.is_locked = False
+        pwd_input.returnPressed.connect(try_unlock)
+        while self.is_locked:
+            dialog.exec()
+            if not self.is_locked:
+                break

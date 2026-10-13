@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List, Literal
 from datetime import datetime
 from enum import Enum
@@ -120,6 +120,17 @@ class JobOutputConfirmRequest(BaseModel):
 class JobIssueReportRequest(BaseModel):
     issue_type: str = Field(..., min_length=2, max_length=50)
     details: str = Field(..., min_length=2, max_length=500)
+    notes: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def reconcile_details(cls, data):
+        if isinstance(data, dict):
+            if not data.get("details") and data.get("notes"):
+                data["details"] = data["notes"]
+            if not data.get("details"):
+                data["details"] = "Operator reported issue"
+        return data
 
 
 class ShopSchema(BaseModel):
@@ -156,6 +167,29 @@ class ShopUpdateRequest(BaseModel):
     supports_duplex: Optional[bool] = None
     supported_layouts: Optional[List[int]] = None
     paper_rates: Optional[dict] = None
+
+    @field_validator("paper_rates", mode="before")
+    @classmethod
+    def validate_paper_rates(cls, v):
+        if v is None:
+            return v
+        if not isinstance(v, dict):
+            raise ValueError("paper_rates must be a dictionary mapping paper type to rate configuration")
+        cleaned = {}
+        for p_type, cfg in v.items():
+            if isinstance(cfg, (int, float)):
+                val = float(cfg)
+                cleaned[p_type] = {
+                    "bw_single": val,
+                    "bw_duplex": val * 2,
+                    "color_single": val + 5.0,
+                    "color_duplex": (val + 5.0) * 2,
+                }
+            elif isinstance(cfg, dict):
+                cleaned[p_type] = cfg
+            else:
+                raise ValueError(f"Invalid rate configuration for paper type '{p_type}'")
+        return cleaned
 
 
 # --- Print Job Schemas ---
@@ -275,11 +309,13 @@ class TokenVerifyResponse(BaseModel):
     is_color: bool
     duplex_mode: DuplexMode
     layout_nup: int
+    paper_type: Optional[str] = "normal"
     total_cost: float
     download_url: str
     download_url_expires_in_seconds: int = 60
     payment_status: Optional[PaymentStatus] = None
     payment_method: Optional[str] = None
+    access_mode: Optional[AccessMode] = AccessMode.ANONYMOUS
 
 
 class JobCompleteRequest(BaseModel):

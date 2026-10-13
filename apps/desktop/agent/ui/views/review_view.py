@@ -14,7 +14,7 @@ from agent.ui.theme import (
 
 
 class ReviewView(QWidget):
-    print_requested = Signal(str)  # printer_name
+    print_requested = Signal(str, str)  # printer_name, job_id
     back_to_queue_requested = Signal()
     hold_requested = Signal(str, str)  # job_id, reason
 
@@ -174,6 +174,8 @@ class ReviewView(QWidget):
 
     def set_job(self, job: dict, preview_path: str = None, printers: list = None, selected_printer: str = ""):
         self.job = job or {}
+        if preview_path:
+            self.job["is_authorized"] = True
         if printers:
             self.set_printers(printers, selected_printer)
 
@@ -234,7 +236,7 @@ class ReviewView(QWidget):
             self.btn_print.setEnabled(False)
             return
 
-        # Check raw driver constraints
+        # Check raw driver constraints first
         if self.job.get("is_color", False):
             self.lbl_compat_status.setText("Print blocked: Color requested but raw spool path is B&W.")
             self.lbl_compat_status.setStyleSheet("font-size: 13px; color: #a63a24; font-weight: 600;")
@@ -255,14 +257,22 @@ class ReviewView(QWidget):
             self.btn_print.setEnabled(False)
             return
 
+        # Check metadata-only / unauthorized inspection
+        if self.job.get("is_metadata_only") or self.job.get("is_authorized") is False:
+            self.lbl_compat_status.setText("Print blocked: Scan receipt or enter release code to authorize physical print.")
+            self.lbl_compat_status.setStyleSheet("font-size: 13px; color: #a63a24; font-weight: 600;")
+            self.btn_print.setEnabled(False)
+            return
+
         self.lbl_compat_status.setText(f"Compatible with {printer}")
         self.lbl_compat_status.setStyleSheet(f"font-size: 13px; color: {COLOR_OLIVE}; font-weight: 600;")
         self.btn_print.setEnabled(True)
 
     def _on_print_clicked(self):
         printer = self.printer_combo.currentText().strip()
-        if printer:
-            self.print_requested.emit(printer)
+        job_id = self.job.get("id") or self.job.get("job_id", "")
+        if printer and job_id:
+            self.print_requested.emit(printer, job_id)
 
     def _on_hold_clicked(self):
         job_id = self.job.get("id") or self.job.get("job_id", "")

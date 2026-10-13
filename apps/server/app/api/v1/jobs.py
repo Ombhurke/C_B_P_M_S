@@ -48,6 +48,7 @@ async def stage_print_job(shop_id: str = Form(...), page_count: int = Form(...),
                           copy_count: int = Form(1), is_color: bool = Form(False),
                           duplex_mode: DuplexMode = Form(DuplexMode.SIMPLEX), layout_nup: int = Form(1),
                           paper_type: str = Form("normal"),
+                          client_quoted_cost: Optional[float] = Form(None),
                           page_range: str = Form("all"), access_mode: Literal["anonymous", "account"] = Form("anonymous"),
                           file: UploadFile = File(...), user=Depends(optional_user)):
     if access_mode == "account" and (not user or user["role"] != "customer"):
@@ -63,6 +64,13 @@ async def stage_print_job(shop_id: str = Form(...), page_count: int = Form(...),
         raise HTTPException(413, "Upload must contain between 1 byte and 25 MB")
     page_count, mime = inspect_document(file.filename or "", content)
     calc = calculate_cost(shop, page_count, copy_count, is_color, duplex_mode, layout_nup, paper_type)
+    if client_quoted_cost is not None:
+        server_total = calc["total_cost"]
+        if abs(server_total - client_quoted_cost) > 0.01:
+            raise HTTPException(
+                409,
+                f"Quote mismatch: client estimated ₹{client_quoted_cost:.2f}, but verified server cost is ₹{server_total:.2f}. Please confirm the updated total."
+            )
     job_id = "job-" + uuid.uuid4().hex
     checkout_token = secrets.token_urlsafe(32)
     created = time.time()
@@ -110,6 +118,7 @@ async def stage_folder_print_job(
     duplex_mode: DuplexMode = Form(DuplexMode.SIMPLEX),
     layout_nup: int = Form(1),
     paper_type: str = Form("normal"),
+    client_quoted_cost: Optional[float] = Form(None),
     access_mode: Literal["anonymous", "account"] = Form("anonymous"),
     files: list[UploadFile] = File(...),
     user=Depends(optional_user),
@@ -149,6 +158,13 @@ async def stage_folder_print_job(
     clean_filename = f"{clean_folder_name}.pdf"
 
     calc = calculate_cost(shop, page_count, copy_count, is_color, duplex_mode, layout_nup, paper_type)
+    if client_quoted_cost is not None:
+        server_total = calc["total_cost"]
+        if abs(server_total - client_quoted_cost) > 0.01:
+            raise HTTPException(
+                409,
+                f"Quote mismatch: client estimated ₹{client_quoted_cost:.2f}, but verified server cost is ₹{server_total:.2f}. Please confirm the updated total."
+            )
     job_id = "job-" + uuid.uuid4().hex
     checkout_token = secrets.token_urlsafe(32)
     created = time.time()

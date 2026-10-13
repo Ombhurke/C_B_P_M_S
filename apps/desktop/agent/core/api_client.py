@@ -122,9 +122,17 @@ class DesktopApiClient:
         return self.request("POST", f"/jobs/{job_id}/confirm-output",
                             json={"job_id": job_id, "notes": notes})
 
-    def report_issue(self, job_id, issue_type="hardware_error", notes=None):
+    def report_issue(self, job_id, issue_type="hardware_error", details=None, notes=None):
+        raw_text = (details or notes or "Operator reported printing issue").strip()
+        if len(raw_text) < 2:
+            raw_text = "Operator reported issue"
+        if len(raw_text) > 500:
+            raw_text = raw_text[:500]
         return self.request("POST", f"/jobs/{job_id}/report-issue",
-                            json={"job_id": job_id, "issue_type": issue_type, "notes": notes})
+                            json={"job_id": job_id, "issue_type": issue_type, "details": raw_text})
+
+    def fetch_shop_activity(self, shop_id=None):
+        return self.request("GET", f"/shops/{shop_id or agent_settings.SHOP_ID}/activity")
 
     def fetch_printers(self, shop_id=None):
         return self.request("GET", f"/shops/{shop_id or agent_settings.SHOP_ID}/printers")
@@ -138,10 +146,6 @@ class DesktopApiClient:
 
     def fetch_team(self, shop_id=None):
         return self.request("GET", f"/shops/{shop_id or agent_settings.SHOP_ID}/team")
-
-    def invite_team_member(self, username, role, password, shop_id=None):
-        return self.request("POST", f"/shops/{shop_id or agent_settings.SHOP_ID}/team",
-                            json={"username": username, "role": role, "password": password})
 
     def update_rates(self, rates_payload, shop_id=None):
         return self.request("PATCH", f"/shops/{shop_id or agent_settings.SHOP_ID}",

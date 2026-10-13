@@ -34,16 +34,21 @@ class DesktopWebSocketClient:
                 await asyncio.to_thread(api_client.fetch_shop_queue)
                 async with websockets.connect(url, open_timeout=10) as ws:
                     await ws.send(json.dumps({"token": api_client.token}))
+                    if self.on_event:
+                        self.on_event("CONNECTED", {})
                     while self.is_running:
                         try:
-                            message = await asyncio.wait_for(ws.recv(), timeout=5)
+                            message = await asyncio.wait_for(ws.recv(), timeout=20)
                             payload = json.loads(message)
                             if self.on_event:
                                 self.on_event(payload.get("event"), payload.get("data", {}))
                         except asyncio.TimeoutError:
-                            # Periodic snapshot catches missed or cross-worker events.
-                            if self.on_event:
-                                self.on_event("RECONCILE", {})
-                            await ws.send("ping")
+                            # Keepalive ping only. Do not trigger full UI reconcile on heartbeat.
+                            try:
+                                await ws.send("ping")
+                            except Exception:
+                                break
             except Exception:
-                await asyncio.sleep(3)
+                if self.on_event:
+                    self.on_event("DISCONNECTED", {})
+                await asyncio.sleep(5)

@@ -48,6 +48,10 @@ class PrintLifecycleManager:
 
     def find_and_review(self, raw_input: str) -> Optional[Dict[str, Any]]:
         """Finds job metadata and authorizes review. NEVER physically prints."""
+        if self.stage in (JobLifecycleStage.SUBMITTING, JobLifecycleStage.SPOOL_ACCEPTED, JobLifecycleStage.AWAITING_CONFIRMATION):
+            self.log("Cannot start new review while a print dispatch is in progress or awaiting confirmation.")
+            return None
+
         shop_id, token = self.scanner_hook.parse_payload(raw_input)
         if not token:
             self.log("Enter a valid PIN or receipt barcode.")
@@ -121,7 +125,7 @@ class PrintLifecycleManager:
 
         return True, "Compatible with station print path."
 
-    def submit_print(self, printer_name: str) -> bool:
+    def submit_print(self, printer_name: str, target_job_id: Optional[str] = None) -> bool:
         """Explicit operator action to spool to physical printer."""
         if not self.dispatch_lock.acquire(blocking=False):
             self.log("A print dispatch is already running; please wait.")
@@ -130,6 +134,11 @@ class PrintLifecycleManager:
         try:
             if not self.active_job:
                 self.log("No active job selected to print.")
+                return False
+
+            active_id = self.active_job.get("id") or self.active_job.get("job_id")
+            if target_job_id and active_id != target_job_id:
+                self.log(f"Print dispatch blocked: requested job {target_job_id} does not match active authorized context {active_id}.")
                 return False
 
             if self.stage != JobLifecycleStage.REVIEWING:
@@ -149,7 +158,7 @@ class PrintLifecycleManager:
                     return False
 
             self._set_stage(JobLifecycleStage.SUBMITTING, self.active_job)
-            self.log(f"Submitting job {self.active_job['job_id']} to {printer_name}...")
+            self.log(f"Submitting job {self.active_job.get('job_id') or active_id} to {printer_name}...")
 
             success = spooler_bridge.spool_job(printer_name, self.local_file_path, self.active_job)
             if not success:
@@ -157,8 +166,8 @@ class PrintLifecycleManager:
                 self.log("Print failed: Spooler rejected the document buffer.")
                 return False
 
-            # Generate native spool job reference
-            self.active_spool_id = f"Spool-{int(time.time() * 1000) % 100000}"
+            # Preserve native spool job reference
+            self.active_spool_id = getattr(spooler_bridge, "last_job_id", None) or f"Spool-{int(time.time() * 1000) % 100000}"
             self._set_stage(JobLifecycleStage.SPOOL_ACCEPTED, {
                 **self.active_job,
                 "spool_id": self.active_spool_id,
@@ -180,7 +189,7 @@ class PrintLifecycleManager:
             self.log("No active job to confirm.")
             return False
 
-        job_id = self.active_job["job_id"]
+        job_id = self.active_job.get("id") or self.active_job.get("job_id")
         try:
             api_client.confirm_output(job_id, notes=notes)
             self.log(f"Physical output confirmed for job {job_id}. Cloud record completed.")
@@ -202,18 +211,29 @@ class PrintLifecycleManager:
             self.log("No active job to report.")
             return False
 
-        job_id = self.active_job["job_id"]
+        job_id = self.active_job.get("id") or self.active_job.get("job_id")
+        text = (notes or "Operator reported printing issue").strip()
+        if len(text) < 2:
+            text = "Operator reported issue"
+
         try:
-            api_client.report_issue(job_id, issue_type=issue_type, notes=notes)
+            api_client.report_issue(job_id, issue_type=issue_type, details=text)
             self.log(f"Issue reported for job {job_id} ({issue_type}). Document retained for recovery.")
             self._cleanup_local()
             self._set_stage(JobLifecycleStage.ISSUE_REPORTED, self.active_job)
             self._set_stage(JobLifecycleStage.IDLE)
             return True
         except Exception as exc:
+            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            if status_code and 400 <= status_code < 500:
+                self.log(f"Issue report rejected permanently by server ({status_code}: {exc}). Not queuing into retry outbox.")
+                self._cleanup_local()
+                self._set_stage(JobLifecycleStage.FAILED, {"error": str(exc)})
+                return False
+
             self.log(f"Issue reporting call failed ({exc}). Enqueuing for background retry...")
             self.completion_outbox.enqueue(job_id, "failed", error_message=str(exc),
-                                           action_type="report_issue", notes=notes, issue_type=issue_type)
+                                           action_type="report_issue", notes=text, issue_type=issue_type)
             self._cleanup_local()
             self._set_stage(JobLifecycleStage.ISSUE_REPORTED, self.active_job)
             self._set_stage(JobLifecycleStage.IDLE)
@@ -225,7 +245,7 @@ class PrintLifecycleManager:
             self._set_stage(JobLifecycleStage.IDLE)
             return True
 
-        job_id = self.active_job.get("job_id")
+        job_id = self.active_job.get("id") or self.active_job.get("job_id")
         self._cleanup_local()
         if job_id and self.stage == JobLifecycleStage.REVIEWING:
             try:
@@ -244,19 +264,27 @@ class PrintLifecycleManager:
         for item in self.completion_outbox.pending():
             job_id = item["job_id"]
             action_type = item.get("action_type", "confirm_output")
+            notes = (item.get("notes") or "Operator reported issue").strip()
+            if len(notes) < 2:
+                notes = "Operator reported issue"
             try:
                 if action_type == "confirm_output":
-                    api_client.confirm_output(job_id, notes=item.get("notes"))
+                    api_client.confirm_output(job_id, notes=notes)
                 elif action_type == "report_issue":
                     api_client.report_issue(job_id, issue_type=item.get("issue_type", "hardware_error"),
-                                            notes=item.get("notes"))
+                                            details=notes)
                 else:
                     api_client.notify_spool_completed(job_id, item["status"], item.get("error_message"))
                 self.completion_outbox.acknowledge(item)
                 flushed += 1
                 self.log(f"Synchronized pending result for {job_id} (no reprint).")
             except Exception as exc:
-                self.log(f"Pending sync for {job_id} remains queued: {exc}")
+                status_code = getattr(getattr(exc, "response", None), "status_code", None)
+                if status_code and 400 <= status_code < 500:
+                    self.log(f"Pending item {job_id} rejected permanently ({status_code}); acknowledging outbox item: {exc}")
+                    self.completion_outbox.acknowledge(item)
+                else:
+                    self.log(f"Pending sync for {job_id} remains queued: {exc}")
         return flushed
 
     def _cleanup_local(self):
