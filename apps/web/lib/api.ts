@@ -66,27 +66,41 @@ export function calculateCost(shop: Shop, config: PrintConfig): Promise<CostCalc
   return request('/jobs/calculate-cost', { method: 'POST', body: form(shop.id, config) });
 }
 
-export function stagePrintJob(
+import { executeDirectUpload } from './upload-coordinator';
+
+export async function stagePrintJob(
   shopId: string,
   config: PrintConfig,
   accessMode: AccessMode = 'anonymous',
   token?: string,
   clientQuotedCost?: number,
 ): Promise<StagedJobResponse> {
-  if (config.isFolder && config.folderFiles && config.folderFiles.length > 0) {
-    const body = form(shopId, config, clientQuotedCost);
-    body.append('folder_name', config.fileName || 'Folder_Bundle');
-    body.append('access_mode', accessMode);
-    config.folderFiles.forEach((file) => body.append('files', file));
-    return request('/jobs/stage-folder', { method: 'POST', body }, token);
+  const filesToUpload = config.isFolder && config.folderFiles && config.folderFiles.length > 0
+    ? config.folderFiles
+    : (config.file ? [config.file] : []);
+
+  if (filesToUpload.length === 0) {
+    throw new Error('Select a document first');
   }
 
-  if (!config.file) throw new Error('Select a document first');
-  const body = form(shopId, config, clientQuotedCost);
-  body.append('file', config.file);
-  body.append('page_range', 'all');
-  body.append('access_mode', accessMode);
-  return request('/jobs/stage', { method: 'POST', body }, token);
+  const result = await executeDirectUpload({
+    files: filesToUpload,
+    purpose: 'transient_print_job',
+    accessMode: accessMode === 'account' ? 'persistent' : 'ephemeral',
+    shopId,
+    printConfig: {
+      color: config.isColor,
+      copies: config.copyCount,
+      duplex: config.duplexMode !== 'simplex',
+      layout_nup: config.layoutNup,
+    },
+  });
+
+  if (!result.job) {
+    throw new Error('Upload finalized but no print job was created');
+  }
+
+  return result.job;
 }
 
 export interface PaymentOrder {
@@ -133,17 +147,6 @@ export function payAtCounter(job: StagedJobResponse): Promise<PaymentSuccessResp
   });
 }
 
-export function mockConfirmPayment(job: StagedJobResponse, orderId: string): Promise<PaymentSuccessResponse> {
-  return request(`/payments/${job.job_id}/mock-confirm`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Checkout-Token': job.checkout_token,
-    },
-    body: JSON.stringify({ order_id: orderId }),
-  });
-}
-
 export interface LoginSession {
   access_token: string;
   user: { username: string; shop_id: string; role: 'admin' | 'operator' };
@@ -157,16 +160,45 @@ export function login(username: string, password: string): Promise<LoginSession>
   });
 }
 
-export function uploadCustomerDocument(file: File): Promise<CustomerDocument> {
-  const body = new FormData();
-  body.append('file', file);
-  return request('/customer/documents', { method: 'POST', body });
+export interface CustomerStorageUsage {
+  account_id: string;
+  active_storage_bytes: number;
+  outstanding_reservation_bytes: number;
+  total_storage_exposure_bytes: number;
+  max_storage_bytes: number;
+  storage_remaining_bytes: number;
+  daily_charged_admission_bytes: number;
+  daily_outstanding_reservation_bytes: number;
+  total_daily_exposure_bytes: number;
+  max_daily_admission_bytes: number;
+  daily_remaining_bytes: number;
+  today_utc: string;
+  resets_at_utc: string;
 }
 
-export function uploadCustomerDocumentsBatch(files: File[]): Promise<CustomerDocument[]> {
-  const body = new FormData();
-  files.forEach((f) => body.append('files', f));
-  return request('/customer/documents/batch', { method: 'POST', body });
+export function fetchCustomerStorageUsage(): Promise<CustomerStorageUsage> {
+  return request<CustomerStorageUsage>('/customer/storage-usage');
+}
+
+export async function uploadCustomerDocument(file: File): Promise<CustomerDocument> {
+  const result = await executeDirectUpload({
+    files: [file],
+    purpose: 'customer_library',
+    accessMode: 'persistent',
+  });
+  if (!result.documents || result.documents.length === 0) {
+    throw new Error('Upload succeeded but no document record was returned');
+  }
+  return result.documents[0];
+}
+
+export async function uploadCustomerDocumentsBatch(files: File[]): Promise<CustomerDocument[]> {
+  const result = await executeDirectUpload({
+    files,
+    purpose: 'customer_library',
+    accessMode: 'persistent',
+  });
+  return result.documents || [];
 }
 
 export interface DocumentQueryParams {

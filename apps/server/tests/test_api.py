@@ -567,7 +567,8 @@ def test_security_unpaid_job_cannot_be_confirmed_or_reported(client):
 
     # 2. Pay and queue job
     receipt, _ = pay(client, job)
-    # 3. Now it can be confirmed
+    # 3. The operator must authorize/claim the receipt before confirming output.
+    assert claim(client, receipt, operator).status_code == 200
     paid_confirm = client.post(f"/api/v1/jobs/{job['job_id']}/confirm-output",
                                headers=operator, json={"notes": "verified print"})
     assert paid_confirm.status_code == 200
@@ -670,6 +671,7 @@ def test_razorpay_verification_flow(client, monkeypatch):
                         "id": payment_id,
                         "order_id": order_id,
                         "status": "captured",
+                        "captured": True,
                         "amount": 800,
                         "currency": "INR",
                     }

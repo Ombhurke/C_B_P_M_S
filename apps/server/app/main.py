@@ -13,6 +13,7 @@ from app.api.v1.checkout import router as checkout_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.release import router as release_router
 from app.api.v1.customer import router as customer_router
+from app.api.v1.uploads import router as uploads_router
 from app.services.websocket_hub import ws_hub
 from app.services.cleanup_service import cleanup_service
 from app.services.storage_service import storage_service
@@ -21,6 +22,7 @@ from app.services.payments import get_provider
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    settings.validate_runtime()
     if settings.PAYMENT_PROVIDER != "disabled":
         get_provider()  # Never silently fall back to simulated payments.
     if settings.SEED_DEMO_SHOPS and settings.ENVIRONMENT != "test":
@@ -54,8 +56,9 @@ app = FastAPI(title=settings.PROJECT_NAME, version=settings.VERSION, lifespan=li
               redoc_url=None, openapi_url="/openapi.json" if settings.ENABLE_API_DOCS else None)
 app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ORIGINS,
                    allow_origin_regex=settings.CORS_ORIGIN_REGEX, allow_credentials=False,
-                   allow_methods=["GET", "POST", "PATCH", "DELETE"], allow_headers=["Authorization", "Content-Type", "X-Checkout-Token"])
-for router in (auth_router, shops_router, jobs_router, checkout_router, release_router, customer_router):
+                   allow_methods=["GET", "POST", "PATCH", "DELETE"],
+                   allow_headers=["Authorization", "Content-Type", "X-Checkout-Token", "X-Guest-Session"])
+for router in (auth_router, shops_router, jobs_router, checkout_router, release_router, customer_router, uploads_router):
     app.include_router(router, prefix=settings.API_V1_PREFIX)
 
 

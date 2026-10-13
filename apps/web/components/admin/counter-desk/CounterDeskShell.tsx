@@ -28,6 +28,8 @@ interface ShellProps {
   initialSummary: Summary | null;
   initialActivity: ActivityEvent[];
   token: string;
+  operatorUsername: string;
+  operatorRole: 'admin' | 'operator';
   onLogout: () => void;
 }
 
@@ -37,6 +39,8 @@ export default function CounterDeskShell({
   initialSummary,
   initialActivity,
   token,
+  operatorUsername,
+  operatorRole,
   onLogout
 }: ShellProps) {
   const [shop, setShop] = useState<Shop>(initialShop);
@@ -44,14 +48,7 @@ export default function CounterDeskShell({
   const [summary, setSummary] = useState<Summary | null>(initialSummary);
   const [activity, setActivity] = useState<ActivityEvent[]>(initialActivity);
   const [stations, setStations] = useState<Station[]>([]);
-  const [team, setTeam] = useState<TeamMember[]>([
-    {
-      username: 'ombhurke101@gmail.com',
-      shop_id: initialShop.id,
-      role: 'admin',
-      active: true
-    }
-  ]);
+  const [team, setTeam] = useState<TeamMember[]>([]);
 
   const [activeTab, setActiveTab] = useState<CounterDeskTab>('overview');
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -82,6 +79,7 @@ export default function CounterDeskShell({
 
   // Periodic polling every 12 seconds
   useEffect(() => {
+    void refreshData();
     const interval = setInterval(refreshData, 12000);
     return () => clearInterval(interval);
   }, [refreshData]);
@@ -171,8 +169,8 @@ export default function CounterDeskShell({
         {/* Footer Profile & Logout */}
         <div className="pt-4 border-t border-[#e5dec5] space-y-3 px-2">
           <div className="text-[11px]">
-            <div className="font-semibold text-[#251c17] truncate">ombhurke101@gmail.com</div>
-            <div className="text-[#8a7e74]">Shop Administrator</div>
+            <div className="font-semibold text-[#251c17] truncate">{operatorUsername}</div>
+            <div className="text-[#8a7e74]">{operatorRole === 'admin' ? 'Shop Administrator' : 'Shop Operator'}</div>
           </div>
           <button
             onClick={onLogout}

@@ -20,7 +20,6 @@ import {
   createPaymentOrder,
   verifyPayment,
   payAtCounter,
-  mockConfirmPayment,
 } from '@/lib/api';
 import { useCustomerAuth } from '@/components/customer/CustomerAuthContext';
 import CustomerWorkspaceHeader from '@/components/customer/workspace/CustomerWorkspaceHeader';
@@ -243,11 +242,8 @@ function ShopCustomerContent() {
       const staged = await stagePrintJob(shop.id, config, accessMode, undefined, costCalc?.total_cost);
       const order = await createPaymentOrder(staged);
 
-      if (order.provider === 'mock') {
-        const receipt = await mockConfirmPayment(staged, order.id);
-        setCompletedReceipt(receipt);
-        setIsProcessingPayment(false);
-        return;
+      if (order.provider !== 'razorpay' || !order.key_id) {
+        throw new Error('Online payments are not configured. Please use Pay at Counter.');
       }
 
       const ready = await ensureRazorpayScript();

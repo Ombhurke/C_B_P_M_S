@@ -1,31 +1,34 @@
 import hashlib
 import threading
 import requests
+from urllib.parse import urlsplit, urlunsplit
 from agent.core.config import agent_settings
 
 
 class DesktopApiClient:
+    @staticmethod
+    def _safe_base_url(value):
+        parsed = urlsplit(value.rstrip("/"))
+        loopback = parsed.hostname in ("localhost", "127.0.0.1", "::1")
+        if (not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment
+                or parsed.path not in ("", "/api/v1")
+                or not (parsed.scheme == "https" or (parsed.scheme == "http" and loopback))):
+            raise ValueError("API URL must use HTTPS; HTTP is allowed only on loopback")
+        # Preserve the HTTPS hostname for certificate checks; normalize only local HTTP.
+        host = parsed.netloc
+        if parsed.scheme == "http" and parsed.hostname == "localhost":
+            host = "127.0.0.1" + (f":{parsed.port}" if parsed.port else "")
+        return urlunsplit((parsed.scheme, host, "/api/v1", "", ""))
+
     def __init__(self, base_url=None):
-        url = (base_url or agent_settings.CLOUD_API_URL).rstrip("/")
-        # On Windows, 'localhost' often resolves to IPv6 '::1' first,
-        # which throws WinError 10061 if uvicorn is listening on IPv4 (127.0.0.1).
-        if url.startswith("http://localhost:"):
-            url = url.replace("http://localhost:", "http://127.0.0.1:", 1)
-        elif url.startswith("https://localhost:"):
-            url = url.replace("https://localhost:", "https://127.0.0.1:", 1)
-        self.base_url = url
+        self.base_url = self._safe_base_url(base_url or agent_settings.CLOUD_API_URL)
         self.token = ""
         self.username = ""
         self.password = ""
         self.lock = threading.Lock()
 
     def set_base_url(self, base_url: str):
-        url = (base_url or agent_settings.CLOUD_API_URL).rstrip("/")
-        if url.startswith("http://localhost:"):
-            url = url.replace("http://localhost:", "http://127.0.0.1:", 1)
-        elif url.startswith("https://localhost:"):
-            url = url.replace("https://localhost:", "https://127.0.0.1:", 1)
-        self.base_url = url
+        self.base_url = self._safe_base_url(base_url or agent_settings.CLOUD_API_URL)
 
     def login(self, username, password):
         with self.lock:
@@ -37,6 +40,7 @@ class DesktopApiClient:
                         self.base_url + "/auth/login",
                         json={"username": username, "password": password},
                         timeout=10,
+                        allow_redirects=False,
                     )
                     if response.status_code == 401:
                         raise ValueError("Invalid operator username or password")
@@ -71,11 +75,11 @@ class DesktopApiClient:
 
     def request(self, method, path, **kwargs):
         response = requests.request(method, self.base_url + path,
-            headers={"Authorization": "Bearer " + self.token}, timeout=15, **kwargs)
+            headers={"Authorization": "Bearer " + self.token}, timeout=15, allow_redirects=False, **kwargs)
         if response.status_code == 401 and self.username:
             self.login(self.username, self.password)
             response = requests.request(method, self.base_url + path,
-                headers={"Authorization": "Bearer " + self.token}, timeout=15, **kwargs)
+                headers={"Authorization": "Bearer " + self.token}, timeout=15, allow_redirects=False, **kwargs)
         if not response.ok:
             raise RuntimeError(response.json().get("detail", "API request failed"))
         return response.json()

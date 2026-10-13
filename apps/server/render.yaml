@@ -2,19 +2,22 @@ services:
   - type: web
     name: cbpms-backend
     runtime: python
+    rootDir: apps/server
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     plan: free
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
-        value: 3.10.6
+        value: 3.13.16
       - key: DATABASE_URL
         sync: false
       - key: BOOTSTRAP_ADMIN_USERNAME
-        sync: false
+        value: ""
       - key: BOOTSTRAP_ADMIN_PASSWORD
-        sync: false
+        value: ""
+      - key: BOOTSTRAP_SHOP_ID
+        value: ""
       - key: CORS_ORIGINS
         sync: false
       - key: PAYMENT_PROVIDER
@@ -37,3 +40,9 @@ services:
         sync: false
       - key: SUPABASE_STORAGE_BUCKET
         value: transient-print-jobs
+      - key: CAPTCHA_PROVIDER
+        value: turnstile
+      - key: CAPTCHA_SECRET_KEY
+        sync: false
+      - key: SCHEDULER_SECRET
+        sync: false

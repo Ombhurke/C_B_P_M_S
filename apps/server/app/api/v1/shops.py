@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.core.auth import current_user, require_shop, password_hash
+from app.core.auth import current_user, optional_user, require_shop, password_hash
 from app.core.database import db
 from app.core.config import settings
 from app.core.audit import record_audit
@@ -25,16 +25,22 @@ def shop_record(shop_id):
     return shop
 
 
+def shop_view(shop, user=None):
+    # Shop discovery exposes prices/capabilities, not internal station or driver data.
+    own_staff = user and user.get("role") in ("admin", "operator") and user.get("shop_id") == shop["id"]
+    return shop if own_staff else {**shop, "printers": [], "stations": []}
+
+
 @router.get("", response_model=list[ShopSchema])
-def list_shops():
+def list_shops(user=Depends(optional_user)):
     with db.transaction(readonly=True) as records:
-        return [s for s in records.list("shops") if s["is_active"]
+        return [shop_view(s, user) for s in records.list("shops") if s["is_active"]
                 and (settings.ENVIRONMENT == "test" or not s["id"].startswith("shop-demo-"))]
 
 
 @router.get("/{shop_id}", response_model=ShopSchema)
-def get_shop(shop_id: str):
-    return shop_record(shop_id)
+def get_shop(shop_id: str, user=Depends(optional_user)):
+    return shop_view(shop_record(shop_id), user)
 
 
 @router.patch("/{shop_id}", response_model=ShopSchema)
@@ -68,7 +74,8 @@ async def update_shop_profile(shop_id: str, payload: ShopProfileUpdateRequest, u
 
 # --- Printers Endpoints ---
 @router.get("/{shop_id}/printers", response_model=list[PrinterSchema])
-def list_shop_printers(shop_id: str):
+def list_shop_printers(shop_id: str, user=Depends(current_user)):
+    require_shop(user, shop_id)
     return shop_record(shop_id).get("printers", [])
 
 
@@ -211,7 +218,12 @@ def get_operator_job_detail(shop_id: str, job_id: str, user=Depends(current_user
         job = records.get("jobs", job_id)
         if not job or job.get("shop_id") != shop_id:
             raise HTTPException(404, "Job not found in this shop")
-    return job
+    fields = ("id", "shop_id", "file_name", "page_count", "copy_count", "is_color",
+              "duplex_mode", "layout_nup", "paper_type", "total_cost", "currency",
+              "job_status", "payment_status", "payment_method", "created_at", "expires_at",
+              "file_size_bytes", "file_hash", "access_mode", "cleanup_pending", "rejection_reason",
+              "last_error", "output_confirmed")
+    return {field: job.get(field) for field in fields}
 
 
 @router.post("/{shop_id}/jobs/{job_id}/reject")
@@ -223,6 +235,8 @@ async def reject_job(shop_id: str, job_id: str, payload: JobRejectRequest, user=
             raise HTTPException(404, "Job not found in this shop")
         if job.get("job_status") in ("completed", "expired"):
             raise HTTPException(409, f"Cannot reject a job in status '{job.get('job_status')}'")
+        if job.get("job_status") == "processing" and job.get("claimed_by") != user["username"]:
+            raise HTTPException(403, "Claim belongs to another operator")
         job["job_status"] = "failed"
         job["rejection_reason"] = payload.reason
         job["rejected_by"] = user["username"]

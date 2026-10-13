@@ -17,6 +17,7 @@ from app.models.schemas import (
     JobIssueReportRequest,
 )
 from app.services.storage_service import storage_service
+from app.services.job_cleanup import finalize_job_cleanup
 from app.services.websocket_hub import ws_hub
 
 router = APIRouter(prefix="/jobs", tags=["Counter release"])
@@ -91,11 +92,7 @@ async def complete_print_job(job_id: str, payload: JobCompleteRequest, user=Depe
                 # Account-linked documents are library records and remain private after printing.
                 job["cleanup_pending"] = job.get("access_mode", "anonymous") == "anonymous"
         # Failure retains cloud bytes until retry or expiry.
-        if job.get("cleanup_pending") and storage_service.purge(job):
-            job.update(cleanup_pending=False, file_path=None, supabase_path=None)
-            if job.get("document_id"):
-                records.remove("documents", job["document_id"])
-        elif job.get("document_id"):
+        if job.get("document_id"):
             document = records.get("documents", job["document_id"])
             if document:
                 document["updated_at"] = iso(time.time())
@@ -104,6 +101,7 @@ async def complete_print_job(job_id: str, payload: JobCompleteRequest, user=Depe
         record_audit(records, "job.complete", actor=user["username"], target=job_id,
                      metadata={"shop_id": job["shop_id"], "status": job["job_status"],
                                 "error_message": payload.error_message})
+    job = finalize_job_cleanup(job)
     await ws_hub.broadcast_to_shop(job["shop_id"], "QUEUE_CHANGED", {"job_id": job_id})
     return {"status": job["job_status"], "job_id": job_id,
             "shredded": job["job_status"] == "completed" and
@@ -121,6 +119,8 @@ async def confirm_job_output(job_id: str, payload: JobOutputConfirmRequest, user
                 job["payment_status"] = "completed"
             else:
                 raise HTTPException(402, "Payment has not been completed for this job")
+        if job.get("claimed_by") != user["username"]:
+            raise HTTPException(403, "Only the claiming operator can confirm output")
         if job.get("job_status") == "completed" and job.get("output_confirmed"):
             return {"status": "completed", "job_id": job_id, "output_confirmed": True}
         if job.get("job_status") not in ("queued", "processing", "failed"):
@@ -128,14 +128,12 @@ async def confirm_job_output(job_id: str, payload: JobOutputConfirmRequest, user
         job["job_status"] = "completed"
         job["output_confirmed"] = True
         job["completed_at"] = iso(time.time())
+        job["download_until"] = 0
         job["cleanup_pending"] = job.get("access_mode", "anonymous") == "anonymous"
-        if job.get("cleanup_pending") and storage_service.purge(job):
-            job.update(cleanup_pending=False, file_path=None, supabase_path=None)
-            if job.get("document_id"):
-                records.remove("documents", job["document_id"])
         records.put("jobs", job_id, job)
         record_audit(records, "job.output_confirmed", actor=user["username"], target=job_id,
                      metadata={"shop_id": job["shop_id"], "notes": payload.notes})
+    job = finalize_job_cleanup(job)
     await ws_hub.broadcast_to_shop(job["shop_id"], "QUEUE_CHANGED", {"job_id": job_id})
     return {"status": "completed", "job_id": job_id, "output_confirmed": True}
 
@@ -165,6 +163,8 @@ async def report_job_issue(job_id: str, payload: JobIssueReportRequest, user=Dep
     with db.transaction() as records:
         job = get_job(records, job_id)
         require_shop(user, job["shop_id"])
+        if job.get("claimed_by") != user["username"]:
+            raise HTTPException(403, "Only the claiming operator can report a print issue")
         if job.get("job_status") in ("completed", "expired"):
             raise HTTPException(409, f"Cannot report issues on {job.get('job_status')} jobs")
         job["job_status"] = "failed"

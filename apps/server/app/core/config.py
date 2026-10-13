@@ -2,6 +2,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Optional
 import os
 from pathlib import Path
+from urllib.parse import urlparse
+import base64
+import json
 
 
 class Settings(BaseSettings):
@@ -34,6 +37,12 @@ class Settings(BaseSettings):
     ENABLE_API_DOCS: bool = False
     SUPABASE_PUBLISHABLE_KEY: str = ""
     
+    # CAPTCHA & Scheduler Configuration
+    CAPTCHA_PROVIDER: str = "mock"
+    CAPTCHA_SECRET_KEY: str = ""
+    CAPTCHA_MIN_SCORE: float = 0.5
+    SCHEDULER_SECRET: str = ""
+    
     # Supabase Configuration
     SUPABASE_URL: Optional[str] = os.environ.get("SUPABASE_URL", None)
     SUPABASE_KEY: Optional[str] = os.environ.get("SUPABASE_KEY", None)
@@ -52,6 +61,31 @@ class Settings(BaseSettings):
     
     # Storage Directory for Local/Staged Files (fallback)
     TEMP_STORAGE_DIR: str = ".cbpms/files"
+
+    def validate_runtime(self):
+        if self.ENVIRONMENT == "test":
+            return
+        if self.ENVIRONMENT not in ("production", "development"):
+            raise ValueError("Invalid application environment")
+        if self.SEED_DEMO_SHOPS or self.ALLOW_LOCAL_STORAGE or self.ALLOW_MOCK_PAYMENTS:
+            raise ValueError("Demo data, local storage, and simulated payments are test-only")
+        if self.ENVIRONMENT == "production" and (self.ENABLE_API_DOCS or self.CORS_ORIGIN_REGEX):
+            raise ValueError("Production requires disabled API docs and explicit CORS origins")
+        for origin in [self.SUPABASE_URL or "", *self.CORS_ORIGINS]:
+            parsed = urlparse(origin)
+            if (parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password
+                    or parsed.path not in ("", "/") or parsed.query or parsed.fragment):
+                raise ValueError("Service URLs and CORS entries must be explicit HTTPS origins")
+        key = self.SUPABASE_PUBLISHABLE_KEY
+        publishable = key.startswith("sb_publishable_")
+        if not publishable and len(key.split(".")) == 3:
+            try:
+                payload = key.split(".")[1]
+                publishable = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))["role"] == "anon"
+            except (ValueError, KeyError, TypeError):
+                publishable = False
+        if not publishable or not self.SUPABASE_SERVICE_ROLE_KEY:
+            raise ValueError("Publishable auth and private storage credentials are required")
 
 
 settings = Settings()

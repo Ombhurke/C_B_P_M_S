@@ -140,8 +140,10 @@ async def stage_folder_print_job(
         suffix = Path(safe_name).suffix.lower()
         if suffix not in (".pdf", ".png", ".jpg", ".jpeg"):
             continue
-        content = await f.read()
+        content = await f.read(settings.MAX_FILE_SIZE_BYTES + 1)
         await f.close()
+        if len(content) > settings.MAX_FILE_SIZE_BYTES:
+            raise HTTPException(413, "An uploaded file exceeds the configured file-size limit")
         if len(content) == 0:
             continue
         total_bytes += len(content)

@@ -23,7 +23,7 @@ class AgentSettings(BaseSettings):
         extra="ignore"
     )
 
-    SHOP_ID: str = os.environ.get("SHOP_ID", "shop-demo-1")
+    SHOP_ID: str = ""
     # Point to your Render service e.g. https://your-cbpms.onrender.com/api/v1
     CLOUD_API_URL: str = os.environ.get("CLOUD_API_URL", "http://127.0.0.1:8000/api/v1")
     # Point to your Render WebSocket e.g. wss://your-cbpms.onrender.com/ws/queue
@@ -41,7 +41,7 @@ class AgentSettings(BaseSettings):
     
     # Auto-release on barcode scan
     AUTO_RELEASE_ON_SCAN: bool = True
-    SELECTED_PRINTER_NAME: str = "HP LaserJet Pro M404dn (B&W High Speed)"
+    SELECTED_PRINTER_NAME: str = ""
     OPERATOR_USERNAME: str = ""
     OPERATOR_PASSWORD: str = ""
     MOCK_PRINTING: bool = False

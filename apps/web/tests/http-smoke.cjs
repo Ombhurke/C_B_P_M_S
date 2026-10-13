@@ -12,7 +12,9 @@ const { once } = require('node:events');
   await new Promise(resolve => probe.close(resolve));
   const child = spawn(process.execPath, [require.resolve('next/dist/bin/next'), 'start', '-H', '127.0.0.1', '-p', String(port)], {
     cwd: require('node:path').join(__dirname, '..'),
-    env: { ...process.env, APP_ORIGIN: 'http://localhost:3000', NEXT_TELEMETRY_DISABLED: '1' },
+    env: { ...process.env, APP_ORIGIN: 'https://app.example', BACKEND_API_URL: 'https://api.example/api/v1',
+      SUPABASE_URL: 'https://project.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_unit_test',
+      NEXT_TELEMETRY_DISABLED: '1' },
     windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.stdout.resume(); child.stderr.resume();
@@ -32,16 +34,16 @@ const { once } = require('node:events');
     assert.match(session.headers.get('cache-control'), /no-store/);
     assert.equal((await fetch(base + '/account')).status, 200);
     assert.equal((await fetch(base + '/auth/google', { method: 'POST' })).status, 403);
-    const begin = await fetch(base + '/auth/google', { method: 'POST', headers: { Origin: 'http://localhost:3000' }, redirect: 'manual' });
+    const begin = await fetch(base + '/auth/google', { method: 'POST', headers: { Origin: 'https://app.example' }, redirect: 'manual' });
     assert.equal(begin.status, 303);
     const destination = new URL(begin.headers.get('location'));
     assert.equal(destination.protocol, 'https:');
     assert.equal(destination.searchParams.get('provider'), 'google');
-    assert.equal(destination.searchParams.get('redirect_to'), 'http://localhost:3000/auth/callback');
+    assert.equal(destination.searchParams.get('redirect_to'), 'https://app.example/auth/callback');
     assert.match(begin.headers.get('set-cookie'), /HttpOnly/);
     assert.ok(destination.searchParams.get('code_challenge'));
     const invalidCallback = await fetch(base + '/auth/callback?next=https://evil.example', { redirect: 'manual' });
-    assert.equal(invalidCallback.headers.get('location'), 'http://localhost:3000/account?auth_error=failed');
+    assert.equal(invalidCallback.headers.get('location'), 'https://app.example/account?auth_error=failed');
     assert.equal((await fetch(base + '/api/auth/logout', { method: 'POST', headers: { Origin: 'https://evil.example' } })).status, 403);
     assert.equal((await fetch(base + '/api/backend/payments/x/mock-confirm', { method: 'POST' })).status, 404);
     console.log('Production HTTP smoke checks passed; no Google account or live database was modified.');

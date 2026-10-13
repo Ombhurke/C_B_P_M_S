@@ -8,6 +8,7 @@ from typing import Protocol
 import hashlib
 import hmac
 import secrets
+import re
 from fastapi import HTTPException
 import httpx
 from app.core.config import settings
@@ -69,10 +70,10 @@ class RazorpayProvider:
             with httpx.Client(timeout=15.0) as client:
                 res = client.post(url, json=payload, auth=(self.key_id, self.key_secret))
                 if res.status_code >= 400:
-                    raise HTTPException(502, f"Razorpay order creation failed: {res.text}")
+                    raise HTTPException(502, "Payment gateway could not create the order")
                 data = res.json()
-        except httpx.RequestError as exc:
-            raise HTTPException(502, f"Payment service connection error: {exc}")
+        except (httpx.RequestError, ValueError):
+            raise HTTPException(502, "Payment gateway is unavailable") from None
 
         return {
             "id": data["id"],
@@ -84,10 +85,7 @@ class RazorpayProvider:
         }
 
     def verify_capture(self, order: dict) -> Receipt:
-        # For legacy interface conformance
-        payment_id = order.get("payment_id") or ""
-        order_id = order.get("id") or ""
-        return Receipt(order_id, payment_id, order.get("amount_minor", 0), order.get("currency", "INR"), True)
+        raise HTTPException(409, "A gateway-verified payment is required")
 
     def verify_payment(
         self,
@@ -97,6 +95,8 @@ class RazorpayProvider:
         expected_amount_minor: int,
         currency: str = "INR",
     ) -> Receipt:
+        if not re.fullmatch(r"order_[A-Za-z0-9]{1,64}", order_id) or not re.fullmatch(r"pay_[A-Za-z0-9]{1,64}", payment_id):
+            raise HTTPException(422, "Invalid payment identifiers")
         # 1. Cryptographic HMAC-SHA256 signature verification
         body = f"{order_id}|{payment_id}".encode("utf-8")
         expected_sig = hmac.new(self.key_secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
@@ -111,15 +111,21 @@ class RazorpayProvider:
                 if res.status_code >= 400:
                     raise HTTPException(502, "Could not verify payment with gateway")
                 payment_data = res.json()
-        except httpx.RequestError:
-            raise HTTPException(502, "Payment verification network error")
+        except (httpx.RequestError, ValueError):
+            raise HTTPException(502, "Payment gateway is unavailable") from None
+
+        if not isinstance(payment_data, dict) or payment_data.get("id") != payment_id:
+            raise HTTPException(409, "Payment ID mismatch")
 
         if payment_data.get("order_id") != order_id:
             raise HTTPException(409, "Payment order ID mismatch")
 
         status = payment_data.get("status")
-        if status not in ("captured", "authorized"):
-            raise HTTPException(409, f"Payment has not been captured (status: {status})")
+        if status != "captured" or payment_data.get("captured") is not True:
+            raise HTTPException(409, "Payment has not been captured")
+
+        if payment_data.get("currency") != currency:
+            raise HTTPException(409, "Payment currency mismatch")
 
         amount_paid = payment_data.get("amount", 0)
         if amount_paid != expected_amount_minor:
@@ -130,6 +136,8 @@ class RazorpayProvider:
 
 def get_provider():
     if settings.PAYMENT_PROVIDER == "razorpay":
+        if settings.ENVIRONMENT == "production" and not settings.RAZORPAY_KEY_ID.startswith("rzp_live_"):
+            raise HTTPException(503, "Live payment credentials are required in production")
         return RazorpayProvider()
     if settings.PAYMENT_PROVIDER == "mock":
         if not settings.ALLOW_MOCK_PAYMENTS or settings.ENVIRONMENT != "test":

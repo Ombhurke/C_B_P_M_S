@@ -9,7 +9,7 @@ function load(file, dependencies = {}, globals = {}) {
   const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } });
   const exports = {};
-  vm.runInNewContext(compiled.outputText, { exports, require: name => dependencies[name] || require(name),
+  vm.runInNewContext(compiled.outputText, { exports, require: name => name === 'server-only' ? {} : dependencies[name] || require(name),
     process: { env: { APP_ORIGIN: 'http://localhost:3000', BACKEND_API_URL: 'http://127.0.0.1:8000/api/v1', SUPABASE_URL: 'https://project.supabase.co' } },
     URL, Request, Headers, Response, AbortSignal, Buffer, Uint8Array, RangeError, ...globals });
   return exports;
@@ -44,6 +44,20 @@ test('origins and backend destinations reject insecure or credential-bearing URL
     assert.throws(() => p.appOrigin());
   }
   assert.equal(policy.backendBase(), 'http://127.0.0.1:8000/api/v1');
+});
+
+test('production requires explicit HTTPS configuration and ignores forged loopback Host', () => {
+  const configured = (env) => load('lib/server/policy.ts', {}, { process: { env: { NODE_ENV: 'production', ...env } } });
+  assert.throws(() => configured({}).appOrigin());
+  assert.throws(() => configured({}).backendBase());
+  assert.throws(() => configured({ APP_ORIGIN: 'http://localhost:3000' }).appOrigin());
+  assert.throws(() => configured({ BACKEND_API_URL: 'http://127.0.0.1:8000/api/v1' }).backendBase());
+  const p = configured({ APP_ORIGIN: 'https://app.example', BACKEND_API_URL: 'https://api.example/api/v1' });
+  assert.equal(p.sameOrigin(new Request('https://app.example/api/backend', {
+    method: 'POST', headers: { origin: 'http://localhost:3000', host: 'localhost:3000' },
+  })), false);
+  assert.equal(p.sameOrigin(new Request('https://app.example', { headers: { referer: 'not a URL' } })), false);
+  assert.equal(p.sameOrigin(new Request('https://app.example', { headers: { origin: 'https://app.example' } })), true);
 });
 
 // Real Next request/response objects; Supabase is mocked only at its external boundary.
@@ -142,7 +156,7 @@ test('real cookie adapter forces HttpOnly, HTTPS Secure and no-store on refresh'
   const helper = load('lib/server/supabase.ts', {
     'server-only': {}, './policy': { appOrigin: () => 'https://app.example' },
     '@supabase/ssr': { createServerClient: (_url, _key, options) => { config = options; return {}; } },
-  }, { process: { env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'test-key' } } });
+  }, { process: { env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test' } } });
   const auth = helper.authClient(request('/api/auth/session'));
   config.cookies.setAll([{ name: 'sb-session', value: 'secret-token', options: { httpOnly: false, secure: false } }], { Pragma: 'no-cache' });
   const { NextResponse } = require('next/server');
@@ -164,4 +178,15 @@ test('unverified session data is never used as an identity', async () => {
   } });
   assert.equal(result, null);
   assert.equal(reads, 0);
+});
+
+test('end-user auth rejects secret and legacy service-role keys', () => {
+  const legacy = (role) => `header.${Buffer.from(JSON.stringify({ role })).toString('base64url')}.signature`;
+  for (const key of ['sb_secret_private', legacy('service_role')]) {
+    const helper = load('lib/server/supabase.ts', {
+      './policy': { appOrigin: () => 'https://app.example' },
+      '@supabase/ssr': { createServerClient: () => { throw new Error('Should never be called'); } },
+    }, { process: { env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_PUBLISHABLE_KEY: key } } });
+    assert.throws(() => helper.authClient(request('/api/auth/session')), /publishable or legacy anon key/);
+  }
 });

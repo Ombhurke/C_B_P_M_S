@@ -13,7 +13,7 @@ function load(file, dependencies = {}, globals = {}) {
   const exports = {};
   vm.runInNewContext(compiled.outputText, {
     exports,
-    require: (name) => dependencies[name] || require(name),
+    require: (name) => name === 'server-only' ? {} : dependencies[name] || require(name),
     process: {
       env: {
         APP_ORIGIN: 'http://localhost:3000',
@@ -52,12 +52,22 @@ test('policy allows required customer flow routes and blocks destructive/operato
   assert.equal(policy.allowedRoute('POST', ['payments', 'job-123', 'order']), true);
   assert.equal(policy.allowedRoute('POST', ['payments', 'job-123', 'verify']), true);
   assert.equal(policy.allowedRoute('POST', ['payments', 'job-123', 'pay-at-counter']), true);
+  assert.equal(policy.allowedRoute('GET', ['customer', 'storage-usage']), true);
+  assert.equal(policy.allowedRoute('GET', ['uploads', 'policy']), true);
+  assert.equal(policy.allowedRoute('GET', ['uploads', 'batches', 'batch-123']), true);
+  assert.equal(policy.allowedRoute('POST', ['uploads', 'guest-session']), true);
+  assert.equal(policy.allowedRoute('POST', ['uploads', 'batches']), true);
+  assert.equal(policy.allowedRoute('POST', ['uploads', 'items', 'item-123', 'permission']), true);
+  assert.equal(policy.allowedRoute('POST', ['uploads', 'items', 'item-123', 'complete']), true);
+  assert.equal(policy.allowedRoute('POST', ['uploads', 'batches', 'batch-123', 'finalize']), true);
+  assert.equal(policy.allowedRoute('POST', ['uploads', 'batches', 'batch-123', 'cancel']), true);
 
   // Blocked routes: cannot delete customer account directly or access internal storage paths
   assert.equal(policy.allowedRoute('DELETE', ['customer', 'account']), false);
   assert.equal(policy.allowedRoute('DELETE', ['customer']), false);
   assert.equal(policy.allowedRoute('GET', ['storage', 'v1', 'object']), false);
   assert.equal(policy.allowedRoute('POST', ['payments', 'fake-confirm']), false);
+  assert.equal(policy.allowedRoute('POST', ['uploads', 'fake-bypass']), false);
   assert.equal(policy.allowedRoute('POST', ['payments', 'job-123', 'unknown-action']), false);
 });
 

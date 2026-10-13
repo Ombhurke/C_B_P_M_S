@@ -71,7 +71,12 @@ class Database:
         self.tables = {
             kind: Table(kind, self.metadata, Column("id", String(128), primary_key=True),
                         Column("data", JSON, nullable=False))
-            for kind in ("shops", "jobs", "users", "sessions", "attempts", "documents", "audit_events")
+            for kind in (
+                "shops", "jobs", "users", "sessions", "attempts", "documents", "audit_events",
+                "upload_batches", "upload_items", "guest_upload_sessions",
+                "quota_accounts", "quota_daily_usage", "quota_events",
+                "object_artifacts", "background_tasks"
+            )
         }
         with self.engine.begin() as conn:
             if self.postgres:

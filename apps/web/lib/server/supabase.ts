@@ -6,7 +6,20 @@ import { appOrigin } from './policy';
 export function authClient(request: NextRequest) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key || new URL(url).protocol !== 'https:') throw new Error('Authentication is not configured');
+  if (!url || !key) throw new Error('Authentication is not configured');
+  const configuredUrl = new URL(url);
+  if (configuredUrl.protocol !== 'https:' || configuredUrl.username || configuredUrl.password ||
+      configuredUrl.pathname !== '/' || configuredUrl.search || configuredUrl.hash) {
+    throw new Error('Invalid authentication configuration');
+  }
+  // A service-role/secret key must never be used as an end-user auth client.
+  let publishable = key.startsWith('sb_publishable_');
+  if (!publishable && key.split('.').length === 3) {
+    try {
+      publishable = JSON.parse(Buffer.from(key.split('.')[1], 'base64url').toString()).role === 'anon';
+    } catch { publishable = false; }
+  }
+  if (!publishable) throw new Error('Authentication requires a publishable or legacy anon key');
   const pending = new Map<string, { name: string; value: string; options: CookieOptions }>();
   const cacheHeaders: Record<string, string> = {};
   const security = { httpOnly: true, secure: appOrigin().startsWith('https:'), sameSite: 'lax' as const, path: '/' };

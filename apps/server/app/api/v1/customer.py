@@ -16,6 +16,7 @@ from app.core.database import db
 from app.models.schemas import CustomerDocumentResponse, CustomerJobResponse
 from app.services.documents import inspect_document
 from app.services.storage_service import storage_service
+from app.services.quota_service import quota_service
 from app.api.v1.jobs import customer_job_view
 
 router = APIRouter(prefix="/customer", tags=["Customer workspace"])
@@ -24,6 +25,13 @@ router = APIRouter(prefix="/customer", tags=["Customer workspace"])
 def require_customer(user):
     if user["role"] != "customer":
         raise HTTPException(403, "Customer account required")
+
+
+@router.get("/storage-usage")
+def get_customer_storage_usage(user=Depends(current_user)):
+    require_customer(user)
+    with db.transaction(readonly=True) as records:
+        return quota_service.get_usage_summary(records, user["id"])
 
 
 @router.post("/documents", response_model=CustomerDocumentResponse)
@@ -37,7 +45,8 @@ async def upload_document(
     safe_filename = Path(file.filename).name.strip()
     if not safe_filename or any(c in safe_filename for c in ("\r", "\n", "\0")):
         raise HTTPException(422, "Invalid filename")
-    content = await file.read()
+    content = await file.read(settings.MAX_FILE_SIZE_BYTES + 1)
+    await file.close()
     if len(content) > settings.MAX_FILE_SIZE_BYTES:
         raise HTTPException(413, f"File exceeds maximum allowed size ({settings.MAX_FILE_SIZE_BYTES // (1024 * 1024)} MB)")
     if len(content) == 0:
@@ -109,7 +118,10 @@ async def upload_documents_batch(
         suffix = Path(safe_name).suffix.lower()
         if suffix not in (".pdf", ".png", ".jpg", ".jpeg"):
             continue
-        content = await f.read()
+        content = await f.read(settings.MAX_FILE_SIZE_BYTES + 1)
+        await f.close()
+        if len(content) > settings.MAX_FILE_SIZE_BYTES:
+            raise HTTPException(413, "An uploaded file exceeds the configured file-size limit")
         if len(content) == 0:
             continue
         total_bytes += len(content)
@@ -286,6 +298,7 @@ def delete_document(document_id: str, user=Depends(current_user)):
     if purged:
         with db.transaction() as records:
             records.remove("documents", document_id)
+            quota_service.free_active_storage(records, user["id"], document.get("file_size_bytes", 0), target_id=document_id)
 
     return {"deleted": True, "document_id": document_id, "status": "deleted" if purged else "deleting"}
 

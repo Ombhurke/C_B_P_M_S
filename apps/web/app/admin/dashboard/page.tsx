@@ -61,6 +61,7 @@ export default function AdminDashboardPage() {
     setBusy(true); setError('');
     try {
       setSession(await login(username, password));
+      setPassword('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed');
     } finally { setBusy(false); }
@@ -133,6 +134,8 @@ export default function AdminDashboardPage() {
         initialSummary={summary}
         initialActivity={activity}
         token={session.access_token}
+        operatorUsername={session.user.username}
+        operatorRole={session.user.role}
         onLogout={signOut}
       />
     );
