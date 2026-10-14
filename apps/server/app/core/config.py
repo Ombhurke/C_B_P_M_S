@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "production"
     PAYMENT_PROVIDER: str = "disabled"
     ALLOW_MOCK_PAYMENTS: bool = False
+    ALLOW_RAZORPAY_TEST_KEYS: bool = os.environ.get("ALLOW_RAZORPAY_TEST_KEYS", "false").lower() in ("true", "1")
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""
     RAZORPAY_WEBHOOK_SECRET: str = ""

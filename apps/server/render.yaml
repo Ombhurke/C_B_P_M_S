@@ -46,3 +46,5 @@ services:
         sync: false
       - key: SCHEDULER_SECRET
         sync: false
+      - key: ALLOW_RAZORPAY_TEST_KEYS
+        value: "true"

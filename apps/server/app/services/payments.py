@@ -136,7 +136,11 @@ class RazorpayProvider:
 
 def get_provider():
     if settings.PAYMENT_PROVIDER == "razorpay":
-        if settings.ENVIRONMENT == "production" and not settings.RAZORPAY_KEY_ID.startswith("rzp_live_"):
+        if (
+            settings.ENVIRONMENT == "production"
+            and not getattr(settings, "ALLOW_RAZORPAY_TEST_KEYS", False)
+            and not settings.RAZORPAY_KEY_ID.startswith("rzp_live_")
+        ):
             raise HTTPException(503, "Live payment credentials are required in production")
         return RazorpayProvider()
     if settings.PAYMENT_PROVIDER == "mock":

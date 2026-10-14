@@ -82,7 +82,7 @@ export async function createGuestSession(shopId: string, captchaToken?: string):
   });
 }
 
-export async function stagePrintJob(
+export function stagePrintJob(
   shopId: string,
   config: PrintConfig,
   accessMode: AccessMode = 'anonymous',
@@ -90,39 +90,20 @@ export async function stagePrintJob(
   clientQuotedCost?: number,
   captchaToken?: string,
 ): Promise<StagedJobResponse> {
-  const filesToUpload = config.isFolder && config.folderFiles && config.folderFiles.length > 0
-    ? config.folderFiles
-    : (config.file ? [config.file] : []);
-
-  if (filesToUpload.length === 0) {
-    throw new Error('Select a document first');
+  if (config.isFolder && config.folderFiles && config.folderFiles.length > 0) {
+    const body = form(shopId, config, clientQuotedCost);
+    body.append('folder_name', config.fileName || 'Folder_Bundle');
+    body.append('access_mode', accessMode);
+    config.folderFiles.forEach((file) => body.append('files', file));
+    return request('/jobs/stage-folder', { method: 'POST', body }, token);
   }
 
-  let guestToken: string | undefined = undefined;
-  if (accessMode === 'anonymous' && !token) {
-    const sessionRes = await createGuestSession(shopId, captchaToken);
-    guestToken = sessionRes.guest_token;
-  }
-
-  const result = await executeDirectUpload({
-    files: filesToUpload,
-    purpose: 'transient_print_job',
-    accessMode: accessMode === 'account' ? 'persistent' : 'ephemeral',
-    shopId,
-    guestToken,
-    printConfig: {
-      color: config.isColor,
-      copies: config.copyCount,
-      duplex: config.duplexMode !== 'simplex',
-      layout_nup: config.layoutNup,
-    },
-  });
-
-  if (!result.job) {
-    throw new Error('Upload finalized but no print job was created');
-  }
-
-  return result.job;
+  if (!config.file) throw new Error('Select a document first');
+  const body = form(shopId, config, clientQuotedCost);
+  body.append('file', config.file);
+  body.append('page_range', 'all');
+  body.append('access_mode', accessMode);
+  return request('/jobs/stage', { method: 'POST', body }, token);
 }
 
 export interface PaymentOrder {
